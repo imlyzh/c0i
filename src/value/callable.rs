@@ -1,7 +1,7 @@
-use sexpr_ir::gast::{Handle, symbol::Symbol};
+use sexpr_ir::gast::{symbol::Symbol, Handle};
 
-use super::scope::Scope;
 use super::result::CResult;
+use super::scope::Scope;
 use crate::ast::Function;
 
 use super::Value;
@@ -16,14 +16,13 @@ pub struct NativeFunction {
     name: Handle<Symbol>,
     is_pure: bool,
     type_sign: (),
-    interface: NativeInterface
+    interface: NativeInterface,
 }
-
 
 #[derive(Debug, Clone)]
 pub enum Callable {
     Function(Handle<Closure>),
-    Native(Handle<NativeFunction>)
+    Native(Handle<NativeFunction>),
 }
 pub trait Call {
     fn call(&self, args: Vec<Value>) -> CResult;

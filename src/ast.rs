@@ -19,7 +19,6 @@ pub enum Expr {
     FunctionCall(Handle<Call>),
 }
 
-
 #[derive(Debug, Clone)]
 pub struct Let {
     pub binds: Vec<(Handle<Symbol>, Expr)>,
@@ -32,10 +31,8 @@ pub struct Cond {
     pub other: Option<Expr>,
 }
 
-
 #[derive(Debug, Clone)]
 pub struct Call(pub Vec<Expr>);
-
 
 #[derive(Debug, Clone)]
 pub struct Function {

@@ -1,8 +1,8 @@
 mod ast;
-mod value;
-mod sexpr_to_ast;
-mod eval;
 mod error;
+mod eval;
+mod sexpr_to_ast;
+mod value;
 
 // mod type_infer;
 

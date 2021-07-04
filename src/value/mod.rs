@@ -4,9 +4,8 @@ pub mod scope;
 
 use std::collections::HashMap;
 
-use sexpr_ir::gast::{Handle, symbol::Symbol};
 use callable::Callable;
-
+use sexpr_ir::gast::{symbol::Symbol, Handle};
 
 #[derive(Debug, Clone)]
 pub enum Value {

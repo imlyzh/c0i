@@ -1,18 +1,16 @@
 use std::collections::HashMap;
 
-use sexpr_ir::gast::{Handle, symbol::Symbol};
+use sexpr_ir::gast::{symbol::Symbol, Handle};
 
 use crate::value::Value;
-
 
 #[derive(Debug, Clone)]
 pub struct SimpleScope(pub HashMap<Handle<Symbol>, Value>);
 
-
 #[derive(Debug, Clone)]
 pub struct Scope {
     this_level: Handle<SimpleScope>,
-    parent: Option<Handle<Scope>>
+    parent: Option<Handle<Scope>>,
 }
 
 impl Scope {
@@ -25,7 +23,7 @@ impl Scope {
         if let Some(r) = r {
             Some(r.clone())
         } else {
-            self.parent.clone().map_or_else(||None, |x| x.get(k))
+            self.parent.clone().map_or_else(|| None, |x| x.get(k))
         }
     }
 }
