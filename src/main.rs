@@ -10,10 +10,8 @@ use std::io::{Write, stdin, stdout};
 
 use sexpr_ir::syntax::sexpr::parse;
 use sexpr_to_ast::FromSexpr;
-use ast::Expr;
 
 use crate::ast::TopLevel;
-
 
 
 fn main() {
