@@ -1,10 +1,12 @@
-use sexpr_ir::gast::{Handle, list::List};
+use sexpr_ir::gast::list::List;
 
-use crate::{ast::{Call, Expr, Function, TopLevel}, error::{CompilerError, bad_syntax}, sexpr_to_ast::symbol_from_sexpr};
+use crate::{
+    ast::{Call, Expr, Function, TopLevel},
+    error::{bad_syntax, CompilerError},
+    sexpr_to_ast::symbol_from_sexpr,
+};
 
 use super::FromSexpr;
-
-
 
 impl FromSexpr<List, Function> for Function {
     fn from_sexpr(i: &List) -> Result<Function, Vec<CompilerError>> {
@@ -99,8 +101,7 @@ impl FromSexpr<List, Function> for Function {
     }
 }
 
-
-pub(crate) fn call_process(x: &Handle<List>) -> Result<Call, Vec<CompilerError>> {
+pub(crate) fn call_process(x: &List) -> Result<Call, Vec<CompilerError>> {
     let mut error_buffer = vec![];
     if x.1.is_some() {
         error_buffer.push(CompilerError::BadSyntax(x.to_string()));
