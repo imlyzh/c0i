@@ -27,7 +27,7 @@ pub struct Let {
 
 #[derive(Debug, Clone)]
 pub struct Cond {
-    pub pairs: Vec<(Handle<Symbol>, Expr)>,
+    pub pairs: Vec<(Expr, Expr)>,
     pub other: Option<Expr>,
 }
 

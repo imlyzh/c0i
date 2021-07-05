@@ -1,16 +1,17 @@
 use sexpr_ir::gast::list::List;
 
-use crate::{
-    ast::{Call, Expr, Function, TopLevel},
-    error::{bad_syntax, CompilerError},
-    sexpr_to_ast::symbol_from_sexpr,
-};
+use crate::{ast::{Function, TopLevel}, error::{bad_syntax, CompilerError}, sexpr_to_ast::symbol_from_sexpr};
 
 use super::FromSexpr;
 
 impl FromSexpr<List, Function> for Function {
     fn from_sexpr(i: &List) -> Result<Function, Vec<CompilerError>> {
         let mut error_buffer = vec![];
+
+        // check is not tail
+        if i.1.is_some() {
+            error_buffer.push(bad_syntax(&*i));
+        }
 
         let mut iter = i.0.iter();
 
@@ -20,11 +21,6 @@ impl FromSexpr<List, Function> for Function {
             .map_err(|e| vec![e])?
             .0
             .clone();
-
-        // check is not tail
-        if i.1.is_some() {
-            error_buffer.push(bad_syntax(&*i));
-        }
 
         // process prarms
         let prarms = iter
@@ -98,28 +94,5 @@ impl FromSexpr<List, Function> for Function {
             };
             Ok(r)
         }
-    }
-}
-
-pub(crate) fn call_process(x: &List) -> Result<Call, Vec<CompilerError>> {
-    let mut error_buffer = vec![];
-    if x.1.is_some() {
-        error_buffer.push(CompilerError::BadSyntax(x.to_string()));
-    }
-    let r =
-        x.0.iter()
-            .map(Expr::from_sexpr)
-            .fold(vec![], |mut record, x| {
-                if let Ok(x) = x {
-                    record.push(x);
-                } else if let Err(mut e) = x {
-                    error_buffer.append(&mut e);
-                }
-                record
-            });
-    if error_buffer.is_empty() {
-        Ok(Call(r))
-    } else {
-        Err(error_buffer)
     }
 }

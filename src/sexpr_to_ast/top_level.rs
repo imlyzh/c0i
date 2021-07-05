@@ -3,7 +3,7 @@ use sexpr_ir::gast::{constant::Constant, list::List, GAst, Handle};
 use crate::{
     ast::{Expr, Function, TopLevel},
     error::CompilerError,
-    sexpr_to_ast::{call_process, symbol_from_sexpr},
+    sexpr_to_ast::symbol_from_sexpr,
     value::Value,
 };
 
@@ -24,12 +24,11 @@ fn top_level_list_process(i: &List) -> Result<TopLevel, Vec<CompilerError>> {
     }
     match i.0.get(0).unwrap() {
         GAst::Const(Constant::Sym(n)) if *n.0 == "define" => define_from_sexpr(i),
-        GAst::Const(Constant::Sym(n)) if *n.0 == "defun" => {
-            Function::from_sexpr(i).map(|f| TopLevel::Function(Handle::new(f)))
-        }
+        GAst::Const(Constant::Sym(n)) if *n.0 == "defun" =>
+            Function::from_sexpr(i).map(|f| TopLevel::Function(Handle::new(f))),
         GAst::Const(Constant::Sym(n)) if *n.0 == "quote" =>
             quote_from_sexpr(i).map(|v| TopLevel::Expr(Expr::Value(v))),
-        _ => call_process(i).map(|c| TopLevel::Expr(Expr::FunctionCall(Handle::new(c)))),
+        _ => Expr::from_sexpr(&GAst::List(Handle::new(i.clone()))).map(TopLevel::Expr),
     }
 }
 
@@ -40,6 +39,7 @@ fn define_from_sexpr(x: &List) -> Result<TopLevel, Vec<CompilerError>> {
     }
     if x.0.len() != 3 {
         error_buffer.push(CompilerError::BadSyntax(x.to_string()));
+        return Err(error_buffer);
     }
     let name = x.0.get(1).unwrap();
     let expr = x.0.get(2).unwrap();
