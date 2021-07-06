@@ -20,7 +20,7 @@ use crate::{ast::TopLevel, value::scope::Scope};
 
 fn main() {
     let env = Scope::new();
-    let prelude = file_parse(Path::new("./scripts/boolean_algebra.sexpr")).unwrap();
+    let prelude = file_parse("./scripts/boolean_algebra.sexpr").unwrap();
     let prelude: Result<Vec<_>, _> = prelude
         .iter()
         .map(TopLevel::from_sexpr)

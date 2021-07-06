@@ -120,7 +120,7 @@ impl Eval for Function {
     fn eval(&self, env: &Handle<Scope>) -> CResult {
         let mut variable_env = vec![];
         let capture  = self.free_variables(&mut variable_env);
-        
+
         let env: Option<HashMap<Handle<Symbol>, Value>> = capture.iter().map(|k| env
             .find(k)
             .map(|v| (k.clone(), v)))
