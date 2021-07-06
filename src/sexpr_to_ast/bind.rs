@@ -74,7 +74,7 @@ fn bind_from_sexpr(i: &GAst) -> Result<(Handle<Symbol>, Expr), Vec<CompilerError
             error_buffer.push(bad_syntax(&*i));
         }
         let name = i.0.get(0).unwrap();
-        let expr = i.0.get(0).unwrap();
+        let expr = i.0.get(1).unwrap();
         let name = symbol_from_sexpr(name);
         let expr = Expr::from_sexpr(expr);
         if let Err(e) = name.clone() {

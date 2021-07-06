@@ -1,5 +1,9 @@
-use sexpr_ir::gast::Handle;
+use std::collections::HashMap;
 
+use sexpr_ir::gast::Handle;
+use sexpr_ir::gast::symbol::Symbol;
+
+use crate::analysis::free_variable::FreeVariables;
 use crate::value::Value;
 use crate::value::callable::{Call, Callable, Closure};
 use crate::value::result::CError;
@@ -114,7 +118,15 @@ impl Eval for crate::ast::Call {
 
 impl Eval for Function {
     fn eval(&self, env: &Handle<Scope>) -> CResult {
-        let env = Scope::from(env.flatten());
+        let mut variable_env = vec![];
+        let capture  = self.free_variables(&mut variable_env);
+        
+        let env: Option<HashMap<Handle<Symbol>, Value>> = capture.iter().map(|k| env
+            .find(k)
+            .map(|v| (k.clone(), v)))
+            .collect();
+        let env = env.ok_or_else(|| CError())?;
+        let env = Scope::from(SimpleScope::from(env));
         let r = Closure(self.clone(), Some(env));
         Ok(Value::Callable(Callable::Closure(Handle::new(r))))
     }

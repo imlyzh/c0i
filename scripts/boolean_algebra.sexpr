@@ -1,0 +1,16 @@
+
+
+(defun (T x y) x)
+
+(defun (F x y) y)
+
+
+(defun (and a b) (a b F))
+
+(defun (or a b) (b T a))
+
+(defun (not x) (x F T))
+
+
+(defun (if-then-else p x y) (p x y))
+
