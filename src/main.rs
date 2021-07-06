@@ -1,10 +1,10 @@
 mod ast;
 mod error;
 mod eval;
-mod sexpr_to_ast;
 mod value;
+mod sexpr_to_ast;
+mod evaluation;
 
-// mod type_infer;
 
 use std::io::{Write, stdin, stdout};
 

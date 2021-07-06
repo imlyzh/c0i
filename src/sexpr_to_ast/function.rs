@@ -64,7 +64,7 @@ impl FromSexpr<List, Function> for Function {
 
         // process bodys
         let bodys: Vec<_> = iter.collect();
-        // /*
+        /*
         if bodys.is_empty() {
             error_buffer.push(CompilerError::IncompleteExpr(i.to_string()));
             return Err(error_buffer);

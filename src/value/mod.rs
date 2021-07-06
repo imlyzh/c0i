@@ -31,3 +31,15 @@ pub struct Dict(pub HashMap<Handle<String>, Value>);
 
 #[derive(Debug, Clone)]
 pub struct Vector(pub Vec<Value>);
+
+
+impl From<&[Value]> for Value {
+    fn from(i: &[Value]) -> Self {
+        if let Some(left) = i.first() {
+            let right = Value::from(&i[1..]);
+            Value::Pair(Handle::new(Pair(left.clone(), right)))
+        } else {
+            Value::Nil
+        }
+    }
+}
