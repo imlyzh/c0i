@@ -16,10 +16,10 @@ type NativeInterface = fn(Vec<Value>) -> CResult;
 
 #[derive(Debug, Clone)]
 pub struct NativeFunction {
-    name: Handle<Symbol>,
-    is_pure: bool,
-    type_sign: (),
-    interface: NativeInterface,
+    pub name: Handle<Symbol>,
+    pub is_pure: bool,
+    pub type_sign: (),
+    pub interface: NativeInterface,
 }
 
 #[derive(Debug, Clone)]
@@ -28,11 +28,11 @@ pub enum Callable {
     Native(Handle<NativeFunction>),
 }
 pub trait Call {
-    fn call(&self, args: Vec<Value>) -> CResult;
+    fn call(&self, args: &[Value]) -> CResult;
 }
 
 impl Call for Callable {
-    fn call(&self, args: Vec<Value>) -> CResult {
+    fn call(&self, args: &[Value]) -> CResult {
         match self {
             Callable::Closure(x) => x.call(args),
             Callable::Native(x) => x.call(args),
@@ -66,7 +66,7 @@ impl Function {
 }
 
 impl Call for Closure {
-    fn call(&self, args: Vec<Value>) -> CResult {
+    fn call(&self, args: &[Value]) -> CResult {
         let Closure(f, env) = self;
         let args_dict = f
         .match_args(&args)
@@ -94,7 +94,7 @@ impl Call for Closure {
 }
 
 impl Call for NativeFunction {
-    fn call(&self, i: Vec<Value>) -> CResult {
-        (self.interface)(i)
+    fn call(&self, i: &[Value]) -> CResult {
+        (self.interface)(i.to_vec())
     }
 }

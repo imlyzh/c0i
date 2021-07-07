@@ -109,7 +109,8 @@ impl Eval for crate::ast::Call {
         debug_assert_ne!(r.len(), 0);
         let mut iter = r.into_iter();
         if let Value::Callable(x) = iter.next().unwrap() {
-            x.call(iter.collect())
+            let args: Vec<_> = iter.collect();
+            x.call(&args)
         } else {
             Err(CError())
         }

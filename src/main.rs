@@ -4,30 +4,33 @@ mod evaluation;
 mod sexpr_to_ast;
 mod value;
 mod analysis;
+mod prelude;
 
 
-use std::{
-    io::{stdin, stdout, Write},
-    path::Path,
-};
+use std::io::{stdin, stdout, Write};
 
+use prelude::init;
 use evaluation::Eval;
 use sexpr_ir::syntax::sexpr::{file_parse, repl_parse};
 use sexpr_to_ast::FromSexpr;
 
-use crate::{ast::TopLevel, value::scope::Scope};
+use crate::ast::TopLevel;
 
 
 fn main() {
-    let env = Scope::new();
+    let env = init();
     let prelude = file_parse("./scripts/boolean_algebra.sexpr").unwrap();
     let prelude: Result<Vec<_>, _> = prelude
         .iter()
         .map(TopLevel::from_sexpr)
         .collect();
     let prelude = prelude.unwrap();
-    let prelude: Result<Vec<_>, _> = prelude.iter().map(|x| x.eval(&env)).collect();
-    println!("load env: {:?}", prelude);
+    let r = prelude
+        .iter()
+        .try_for_each(|x| x.eval(&env).map(|_| ()));
+    if let Err(e) = r {
+        println!("error: {:?}", e);
+    }
     loop {
         print!(">>> ");
         stdout().flush().unwrap();
@@ -36,8 +39,7 @@ fn main() {
         // parse
         let r = repl_parse(&buf).unwrap();
         // into ast
-        let r: Result<_, _> = TopLevel::from_sexpr(&r);
-        match r {
+        match TopLevel::from_sexpr(&r) {
             Err(e) => println!("error: {:?}", e),
             Ok(v) => {
                 let r = v.eval(&env);
