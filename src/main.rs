@@ -11,23 +11,36 @@ use std::io::{stdin, stdout, Write};
 
 use prelude::init;
 use evaluation::Eval;
+use sexpr_ir::gast::Handle;
 use sexpr_ir::syntax::sexpr::{file_parse, repl_parse};
 use sexpr_to_ast::FromSexpr;
 
-use crate::ast::TopLevel;
+use ast::TopLevel;
+use value::result::CError;
+use value::scope::Scope;
+
+
+fn load_file(path: &str, env: &Handle<Scope>) -> Result<(), CError> {
+    let file = file_parse(path).unwrap();
+    let file: Result<Vec<_>, _> = file
+        .iter()
+        .map(TopLevel::from_sexpr)
+        .collect();
+    let file = file.unwrap();
+    file
+        .iter()
+        .try_for_each(|x| x.eval(&env).map(|_| ()))?;
+    Ok(())
+}
 
 
 fn main() {
     let env = init();
-    let prelude = file_parse("./scripts/boolean_algebra.sexpr").unwrap();
-    let prelude: Result<Vec<_>, _> = prelude
-        .iter()
-        .map(TopLevel::from_sexpr)
-        .collect();
-    let prelude = prelude.unwrap();
-    let r = prelude
-        .iter()
-        .try_for_each(|x| x.eval(&env).map(|_| ()));
+    let r = load_file("./scripts/boolean_algebra.sexpr", &env);
+    if let Err(e) = r {
+        println!("error: {:?}", e);
+    }
+    let r = load_file("./scripts/functools.sexpr", &env);
     if let Err(e) = r {
         println!("error: {:?}", e);
     }

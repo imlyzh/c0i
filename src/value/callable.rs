@@ -70,7 +70,7 @@ impl Call for Closure {
         let Closure(f, env) = self;
         let args_dict = f
         .match_args(&args)
-        .ok_or_else(|| CError())?;
+        .ok_or_else(|| CError::PrarmsIsNotMatching(args.to_vec()))?;
 
         let scope = if let Some(env) = env {
             env.new_level(args_dict)

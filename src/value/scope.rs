@@ -5,11 +5,11 @@ use sexpr_ir::gast::{symbol::Symbol, Handle};
 use crate::value::Value;
 
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct SimpleScope(pub Handle<RwLock<HashMap<Handle<Symbol>, Value>>>);
 
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct Scope {
     pub this_level: SimpleScope,
     pub parent: Option<Handle<Scope>>,

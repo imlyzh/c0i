@@ -43,7 +43,7 @@ impl Eval for Expr {
         match self {
             Expr::Variable(k) => env
                 .find(k)
-                .ok_or_else(|| CError()),
+                .ok_or_else(|| CError::SymbolNotFound(k.clone())),
             Expr::Value(x) => Ok(x.clone()),
             Expr::Let(x) => x.eval(env),
             Expr::Cond(x) => x.eval(env),
@@ -90,14 +90,14 @@ impl Eval for Cond {
                 }
             } else {
                 // return error "cond is not boolean"
-                return Err(CError());
+                return Err(CError::CondIsNotFound(c));
             }
         }
         if let Some(x) = &self.other {
             x.eval(env)
         } else {
             // return error "conds is not matching"
-            Err(CError())
+            Err(CError::CondIsNotMatching)
         }
     }
 }
@@ -108,11 +108,12 @@ impl Eval for crate::ast::Call {
         let r = r?;
         debug_assert_ne!(r.len(), 0);
         let mut iter = r.into_iter();
-        if let Value::Callable(x) = iter.next().unwrap() {
+        let value = iter.next().unwrap();
+        if let Value::Callable(x) = value {
             let args: Vec<_> = iter.collect();
             x.call(&args)
         } else {
-            Err(CError())
+            Err(CError::ValueIsNotCallable(value))
         }
     }
 }
@@ -122,12 +123,14 @@ impl Eval for Function {
         let mut variable_env = vec![];
         let capture  = self.free_variables(&mut variable_env);
 
-        let env: Option<HashMap<Handle<Symbol>, Value>> = capture.iter().map(|k| env
-            .find(k)
-            .map(|v| (k.clone(), v)))
+        let env: Result<HashMap<Handle<Symbol>, Value>, _> = capture.iter()
+        .map(|k| env
+            .find(k).map_or_else(
+                ||Err(CError::CaptureVariableError(k.clone())),
+                |v| Ok((k.clone(), v)))
+            )
             .collect();
-        let env = env.ok_or_else(|| CError())?;
-        let env = Scope::from(SimpleScope::from(env));
+        let env = Scope::from(SimpleScope::from(env?));
         let r = Closure(self.clone(), Some(env));
         Ok(Value::Callable(Callable::Closure(Handle::new(r))))
     }
