@@ -54,6 +54,11 @@ impl Scope {
         Handle::new(r)
     }
 
+    pub fn set(self: &Handle<Scope>, k: &Handle<Symbol>, v: &Value) {
+        let mut record = self.this_level.0.write().unwrap();
+        record.insert(k.clone(), v.clone());
+    }
+
     pub fn find_from_raw(&self, k: &str) -> Option<Value> {
         self.find(&Handle::new(Symbol::new(k)))
     }

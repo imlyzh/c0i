@@ -36,7 +36,7 @@ impl FromSexpr<List, Cond> for Cond {
             if let (Expr::Variable(s), o) = pairs.last().unwrap() {
                 if *s.0 == "else" {
                     other = Some(o.clone());
-                    pairs.pop();
+                    pairs= pairs[..pairs.len()-1].to_vec();
                 }
             }
         };
@@ -60,7 +60,7 @@ fn pair_from_sexpr(i: &GAst) -> Result<(Expr, Expr), Vec<CompilerError>> {
             error_buffer.push(bad_syntax(&*i));
         }
         let cond = i.0.get(0).unwrap();
-        let expr = i.0.get(0).unwrap();
+        let expr = i.0.get(1).unwrap();
         let cond = Expr::from_sexpr(cond);
         let expr = Expr::from_sexpr(expr);
         if let Err(mut e) = cond.clone() {

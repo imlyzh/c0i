@@ -1,3 +1,25 @@
 
-(define (list-map fun lst)
-    )
+
+(defun (list-map fun lst)
+    (cond
+        [(pair? lst) (let (
+            [h (fun (car lst))]
+            [t (list-map (cdr lst))])
+            (cons h t))]
+        [else nil]))
+
+
+(defun (list-fold fun init lst)
+    (cond
+        [(pair? lst) (fun (fun init (car lst)) (cdr lst))]
+        [else init]))
+
+(defun (list-reduce fun lst)
+    (list-fold fun (car lst) (cdr lst)))
+
+
+(defun (+ . args)
+    (cond
+        [(int?) (list-reduce +i args)]
+        [(uint?) (list-reduce +u args)]
+        [(float?) (list-reduce +f args)]))

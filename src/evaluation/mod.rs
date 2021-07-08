@@ -12,7 +12,6 @@ use crate::value::{result::CResult, scope::Scope};
 
 use crate::ast::*;
 
-pub mod prelude;
 
 pub trait Eval {
     fn eval(&self, env: &Handle<Scope>) -> CResult;
@@ -121,17 +120,7 @@ impl Eval for crate::ast::Call {
 
 impl Eval for Function {
     fn eval(&self, env: &Handle<Scope>) -> CResult {
-        let mut variable_env = vec![];
-        let capture  = self.free_variables(&mut variable_env);
-
-        let env: Result<HashMap<Handle<Symbol>, Value>, _> = capture.iter()
-        .map(|k| env
-            .find(k).map_or_else(
-                ||Err(CError::CaptureVariableError(k.clone())),
-                |v| Ok((k.clone(), v)))
-            )
-            .collect();
-        let env = Scope::from(SimpleScope::from(env?));
+        let env = env.new_level(SimpleScope::new());
         let r = Closure(self.clone(), Some(env));
         Ok(Value::Callable(Callable::Closure(Handle::new(r))))
     }

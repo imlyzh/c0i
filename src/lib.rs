@@ -1,3 +1,4 @@
+#![feature(unchecked_math)]
 pub mod ast;
 pub mod evaluation;
 pub mod sexpr_to_ast;
