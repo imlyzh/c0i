@@ -23,6 +23,42 @@ pub enum Value {
     Callable(Callable),
 }
 
+
+macro_rules! impl_is_type {
+    ($name:ident, $tp:ident) => {
+        pub fn $name(&self) -> bool {
+            if let Value::$tp(_) = self {
+                true
+            } else {
+                false
+            }
+        }
+    };
+}
+
+
+impl Value {
+    pub fn is_nil(&self) -> bool {
+        if let Value::Nil = self {
+            true
+        } else {
+            false
+        }
+    }
+    impl_is_type!(is_bool, Bool);
+    impl_is_type!(is_char, Char);
+    impl_is_type!(is_int, Int);
+    impl_is_type!(is_uint, Uint);
+    impl_is_type!(is_float, Float);
+    impl_is_type!(is_str, Str);
+    impl_is_type!(is_sym, Sym);
+    impl_is_type!(is_pair, Pair);
+    impl_is_type!(is_dict, Dict);
+    impl_is_type!(is_vec, Vec);
+    impl_is_type!(is_callable, Callable);
+}
+
+
 #[derive(Debug, Clone)]
 pub struct Pair(pub Value, pub Value);
 

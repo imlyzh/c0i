@@ -1,4 +1,5 @@
 pub mod raw_operator;
+pub mod dynamic_type_check;
 pub mod native_math_operator;
 pub mod native_string_operator;
 
@@ -9,6 +10,7 @@ use sexpr_ir::gast::{Handle, symbol::Location};
 use crate::value::{Value, callable::Callable, scope::Scope};
 
 use raw_operator::*;
+use dynamic_type_check::*;
 use native_math_operator::*;
 use native_string_operator::*;
 
@@ -78,6 +80,20 @@ pub fn init() -> Handle<Scope> {
         set_wrap!(rcd, DIV_INT_NAME, DIV_INT_WRAP);
         set_wrap!(rcd, DIV_UINT_NAME, DIV_UINT_WRAP);
         set_wrap!(rcd, DIV_FLOAT_NAME, DIV_FLOAT_WRAP);
+
+        // type check
+        set_wrap!(rcd, IS_NIL_NAME, IS_NIL_WRAP);
+        set_wrap!(rcd, IS_CHAR_NAME, IS_CHAR_WRAP);
+        set_wrap!(rcd, IS_BOOL_NAME, IS_BOOL_WRAP);
+        set_wrap!(rcd, IS_INT_NAME, IS_INT_WRAP);
+        set_wrap!(rcd, IS_UINT_NAME, IS_UINT_WRAP);
+        set_wrap!(rcd, IS_FLOAT_NAME, IS_FLOAT_WRAP);
+        set_wrap!(rcd, IS_STR_NAME, IS_STR_WRAP);
+        set_wrap!(rcd, IS_SYM_NAME, IS_SYM_WRAP);
+        set_wrap!(rcd, IS_PAIR_NAME, IS_PAIR_WRAP);
+        set_wrap!(rcd, IS_DICT_NAME, IS_DICT_WRAP);
+        set_wrap!(rcd, IS_VEC_NAME, IS_VEC_WRAP);
+        set_wrap!(rcd, IS_CALLABLE_NAME, IS_CALLABLE_WRAP);
     }
     record
 }

@@ -10,6 +10,7 @@ mod prelude;
 
 use std::io::{stdin, stdout, Write};
 
+use crate::prelude::native_string_operator::display_item;
 use prelude::init;
 use evaluation::Eval;
 use sexpr_ir::gast::Handle;
@@ -51,6 +52,9 @@ fn main() {
         let mut buf = String::new();
         stdin().read_line(&mut buf).unwrap();
         // parse
+        if buf.trim().is_empty() {
+            continue;
+        }
         let r = repl_parse(&buf).unwrap();
         // into ast
         match TopLevel::from_sexpr(&r) {
@@ -59,7 +63,10 @@ fn main() {
                 let r = v.eval(&env);
                 match r {
                     Err(e) => println!("error: {:?}", e),
-                    Ok(v) => println!("=>  {:?}", v),
+                    Ok(v) => {
+                        display_item(v);
+                        println!("");
+                    },
                 }
             }
         }

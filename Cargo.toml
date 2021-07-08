@@ -10,6 +10,7 @@ edition = "2018"
 name = "c0i"
 path = "src/main.rs"
 
+
 [lib]
 name = "c0ilib"
 path = "src/lib.rs"
