@@ -6,10 +6,7 @@ mod value;
 mod analysis;
 
 
-use std::{
-    io::{stdin, stdout, Write},
-    path::Path,
-};
+use std::io::{stdin, stdout, Write};
 
 use evaluation::Eval;
 use sexpr_ir::syntax::sexpr::{file_parse, repl_parse};
