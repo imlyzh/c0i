@@ -2,24 +2,9 @@ use lazy_static::lazy_static;
 
 use sexpr_ir::gast::{Handle, symbol::Symbol};
 
-use crate::value::{Pair, Value, Vector, callable::{Call, NativeFunction}, result::{CError, CResult}};
+use crate::{impl_wrap, value::{Pair, Value, Vector, callable::{Call, NativeFunction}, result::{CError, CResult}}};
 
 use super::LOCATION;
-
-
-macro_rules! impl_wrap {
-    ($id:ident, $symid:ident, $fun:ident, $name:expr) => {
-        lazy_static! {
-            pub static ref $symid: Handle<Symbol> = Handle::new(Symbol::from($name, &LOCATION));
-            pub static ref $id: NativeFunction = NativeFunction {
-                name: $symid.clone(),
-                is_pure: true,
-                type_sign: (),
-                interface: $fun
-            };
-        }
-    };
-}
 
 
 fn car(args: Vec<Value>) -> CResult {
@@ -34,7 +19,7 @@ fn car(args: Vec<Value>) -> CResult {
     }
 }
 
-impl_wrap!(CAR_WRAP, CAR_NAME, car, "car");
+impl_wrap!(CAR_WRAP, CAR_NAME, car, "car", &LOCATION);
 
 
 fn cdr(args: Vec<Value>) -> CResult {
@@ -49,7 +34,7 @@ fn cdr(args: Vec<Value>) -> CResult {
     }
 }
 
-impl_wrap!(CDR_WRAP, CDR_NAME, cdr, "cdr");
+impl_wrap!(CDR_WRAP, CDR_NAME, cdr, "cdr", &LOCATION);
 
 
 fn cons(args: Vec<Value>) -> CResult {
@@ -61,14 +46,14 @@ fn cons(args: Vec<Value>) -> CResult {
             args.get(1).unwrap().clone()))))
 }
 
-impl_wrap!(CONS_WRAP, CONS_NAME, cons, "cons");
+impl_wrap!(CONS_WRAP, CONS_NAME, cons, "cons", &LOCATION);
 
 
 fn vector(args: Vec<Value>) -> CResult {
     Ok(Value::Vec(Handle::new(Vector(args))))
 }
 
-impl_wrap!(VECTOR_WRAP, VECTOR_NAME, vector, "vector");
+impl_wrap!(VECTOR_WRAP, VECTOR_NAME, vector, "vector", &LOCATION);
 
 
 fn vector_map(args: Vec<Value>) -> CResult {
@@ -94,7 +79,7 @@ fn vector_map(args: Vec<Value>) -> CResult {
     Ok(Value::Vec(Handle::new(Vector(r?))))
 }
 
-impl_wrap!(VECTOR_MAP_WRAP, VECTOR_MAP_NAME, vector_map, "vector-map");
+impl_wrap!(VECTOR_MAP_WRAP, VECTOR_MAP_NAME, vector_map, "vector-map", &LOCATION);
 
 
 fn vector_reduce(args: Vec<Value>) -> CResult {
@@ -118,7 +103,7 @@ fn vector_reduce(args: Vec<Value>) -> CResult {
     iter.try_fold(init, |x, y| callable.call(&[x, y.clone()]))
 }
 
-impl_wrap!(VECTOR_REDUCE_WRAP, VECTOR_REDUCE_NAME, vector_reduce, "vector-reduce");
+impl_wrap!(VECTOR_REDUCE_WRAP, VECTOR_REDUCE_NAME, vector_reduce, "vector-reduce", &LOCATION);
 
 
 fn id(args: Vec<Value>) -> CResult {
@@ -128,11 +113,11 @@ fn id(args: Vec<Value>) -> CResult {
     Ok(args.get(0).unwrap().clone())
 }
 
-impl_wrap!(ID_WRAP, ID_NAME, id, "id");
+impl_wrap!(ID_WRAP, ID_NAME, id, "id", &LOCATION);
 
 
 fn ignore(_args: Vec<Value>) -> CResult {
     Ok(Value::Nil)
 }
 
-impl_wrap!(IGNORE_WRAP, IGNORE_NAME, ignore, "ignore");
+impl_wrap!(IGNORE_WRAP, IGNORE_NAME, ignore, "ignore", &LOCATION);

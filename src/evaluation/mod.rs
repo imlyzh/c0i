@@ -12,7 +12,6 @@ use crate::value::{result::CResult, scope::Scope};
 
 use crate::ast::*;
 
-pub mod prelude;
 
 pub trait Eval {
     fn eval(&self, env: &Handle<Scope>) -> CResult;

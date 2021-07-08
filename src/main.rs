@@ -1,3 +1,4 @@
+#![feature(unchecked_math)]
 mod ast;
 mod error;
 mod evaluation;

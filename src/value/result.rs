@@ -15,4 +15,6 @@ pub enum CError {
     CaptureVariableError(Handle<Symbol>),
     PrarmsIsNotMatching(Vec<Value>),
     TypeError(((), Value)),
+    // MathError,
+    ZeroDivisionError,
 }
