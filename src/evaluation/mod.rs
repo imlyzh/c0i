@@ -1,16 +1,18 @@
-use std::collections::HashMap;
+pub mod debug_eval;
+pub mod partial_eval;
+pub mod call;
+pub mod partial_call;
 
 use sexpr_ir::gast::Handle;
-use sexpr_ir::gast::symbol::Symbol;
 
-use crate::analysis::free_variable::FreeVariables;
 use crate::value::Value;
-use crate::value::callable::{Call, Callable, Closure};
+use crate::value::callable::{Callable, Closure};
 use crate::value::result::CError;
 use crate::value::scope::SimpleScope;
 use crate::value::{result::CResult, scope::Scope};
 
 use crate::ast::*;
+use call::Call;
 
 
 pub trait Eval {
@@ -60,7 +62,10 @@ impl Eval for Let {
         {
             let mut record = this_level.0.write().unwrap();
             for (k, v) in &self.binds {
-                let v = v.eval(env)?;
+                let v = v.eval(env)
+                .map_err(|x| CError::Positional(
+                    self.pos.clone(),
+                    Handle::new(x)))?;
                 record.insert(k.clone(), v);
             }
         }
@@ -69,13 +74,22 @@ impl Eval for Let {
             Ok(Value::Nil)
         } else if self.bodys.len() == 1 {
             self.bodys.first().unwrap().eval(&env)
+            .map_err(|x| CError::Positional(
+                self.pos.clone(),
+                Handle::new(x)))
         } else {
             let body_end = self.bodys.last().unwrap();
             let bodys = &self.bodys[..self.bodys.len()-1];
             for i in bodys {
-                i.eval(&env)?;
+                i.eval(&env)
+                .map_err(|x| CError::Positional(
+                    self.pos.clone(),
+                    Handle::new(x)))?;
             }
             body_end.eval(&env)
+            .map_err(|x| CError::Positional(
+                self.pos.clone(),
+                Handle::new(x)))
         }
     }
 }
@@ -83,21 +97,32 @@ impl Eval for Let {
 impl Eval for Cond {
     fn eval(&self, env: &Handle<Scope>) -> CResult {
         for (cond, expr) in &self.pairs {
-            let c = cond.eval(env)?;
+            let c = cond
+            .eval(env)
+            .map_err(|x| CError::Positional(
+                self.pos.clone(),
+                Handle::new(x)))?;
             if let Value::Bool(c) = c {
                 if c {
-                    return expr.eval(env);
+                    return expr.eval(env)
+                    .map_err(|x| CError::Positional(
+                        self.pos.clone(),
+                        Handle::new(x)));
                 }
             } else {
                 // return error "cond is not boolean"
-                return Err(CError::CondIsNotFound(c));
+                return Err(CError::Positional(
+                    self.pos.clone(),
+                    Handle::new(CError::CondIsNotBoolean(c))));
             }
         }
         if let Some(x) = &self.other {
             x.eval(env)
         } else {
             // return error "conds is not matching"
-            Err(CError::CondIsNotMatching)
+            Err(CError::Positional(
+                self.pos.clone(),
+                Handle::new(CError::CondIsNotMatching)))
         }
     }
 }
@@ -111,7 +136,8 @@ impl Eval for crate::ast::Call {
         let value = iter.next().unwrap();
         if let Value::Callable(x) = value {
             let args: Vec<_> = iter.collect();
-            x.call(&args)
+            Call::call(&x, &args)
+            .map_err(|e| CError::StackBacktrace(x, Handle::new(e)))
         } else {
             Err(CError::ValueIsNotCallable(value))
         }

@@ -2,7 +2,7 @@ pub mod callable;
 pub mod result;
 pub mod scope;
 
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt::Display};
 
 use callable::Callable;
 use sexpr_ir::gast::{symbol::Symbol, Handle};
@@ -24,14 +24,89 @@ pub enum Value {
 }
 
 
+impl Display for Value {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Value::Nil => write!(f, "nil"),
+            Value::Bool(v) => write!(f, "{}", v),
+            // Value::Char(v) => write!(f, "'{}'", v),
+            Value::Uint(v) => write!(f, "{}", v),
+            Value::Int(v) => write!(f, "{}", v),
+            Value::Float(v) => write!(f, "{}", v),
+            Value::Str(v) => write!(f, "\"{}\"", v),
+            Value::Sym(v) => write!(f, "{}", v),
+            Value::Char(v) => write!(f, "(char \"{}\")", v),
+            Value::Dict(v) => v.fmt(f),
+            Value::Vec(v) => v.fmt(f),
+            Value::Pair(v) => v.fmt(f),
+            Value::Callable(v) => v.fmt(f),
+        }
+    }
+}
+
+
+impl Display for Pair {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut this = self;
+        write!(f, "'(")?;
+        let mut start = true;
+        loop {
+            match this {
+                Pair(v, Value::Pair(t)) => {
+                    if !start {
+                        write!(f, " ")?;
+                    }
+                    v.fmt(f)?;
+                    this = t;
+                    start = false;
+                    continue;
+                },
+                Pair(v, Value::Nil) => {
+                    if !start {
+                        write!(f, " ")?;
+                    }
+                    v.fmt(f)?;
+                    break;
+                },
+                Pair(v, t) => {
+                    if !start {
+                        write!(f, " ")?;
+                    }
+                    v.fmt(f)?;
+                    write!(f, " . ")?;
+                    t.fmt(f)?;
+                    break;
+                },
+            }
+        }
+        write!(f, ")")
+    }
+}
+
+impl Display for Vector {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let r = self.0
+        .iter()
+        .map(Value::to_string)
+        .collect::<Vec<_>>();
+        write!(f, "(vec {})", r.join(" "))
+    }
+}
+
+impl Display for Dict {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let r = self.0.iter()
+            .map(|(k, v)| format!("'(\"{}\" . {})", k, v))
+            .collect::<Vec<_>>();
+        write!(f, "(dict {})", r.join(" "))
+    }
+}
+
+
 macro_rules! impl_is_type {
     ($name:ident, $tp:ident) => {
         pub fn $name(&self) -> bool {
-            if let Value::$tp(_) = self {
-                true
-            } else {
-                false
-            }
+            matches!(self, Value::$tp(_))
         }
     };
 }
@@ -39,11 +114,7 @@ macro_rules! impl_is_type {
 
 impl Value {
     pub fn is_nil(&self) -> bool {
-        if let Value::Nil = self {
-            true
-        } else {
-            false
-        }
+        matches!(self, Value::Nil)
     }
     impl_is_type!(is_bool, Bool);
     impl_is_type!(is_char, Char);

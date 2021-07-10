@@ -1,6 +1,6 @@
-use sexpr_ir::gast::list::List;
+use sexpr_ir::gast::{GAst, constant::Constant, list::List};
 
-use crate::{ast::{Function, TopLevel}, error::{bad_syntax, CompilerError}, sexpr_to_ast::symbol_from_sexpr};
+use crate::{ast::{Function, TopLevel}, error::{CompilerError, bad_syntax, incomplete_expr, invalid_expr_type, invalid_list_tail}, sexpr_to_ast::symbol_from_sexpr};
 
 use super::FromSexpr;
 
@@ -10,30 +10,32 @@ impl FromSexpr<List, Function> for Function {
 
         // check is not tail
         if i.1.is_some() {
-            error_buffer.push(bad_syntax(&*i));
+            error_buffer.push(invalid_list_tail(&*i));
         }
 
         let mut iter = i.0.iter();
 
         // get def headle
-        let def_headle = iter.next().ok_or_else(|| vec![bad_syntax(&*i)])?;
-        let def_headle = symbol_from_sexpr(def_headle)
-            .map_err(|e| vec![e])?
-            .0
-            .clone();
+        let def_headle = iter.next().ok_or_else(|| vec![incomplete_expr(&*i)])?;
+        let (def_headle, pos) = if let GAst::Const(Constant::Sym(sym)) = def_headle {
+            (sym.0.clone(), sym.1.clone())
+        } else {
+            error_buffer.push(invalid_expr_type(i, ()));
+            return Err(error_buffer);
+        };
 
         // process prarms
         let prarms = iter
             .next()
-            .ok_or_else(|| vec![bad_syntax(&*i)])?
+            .ok_or_else(|| vec![incomplete_expr(&*i)])?
             .get_list()
-            .ok_or_else(|| vec![bad_syntax(&*i)])?;
+            .ok_or_else(|| vec![invalid_expr_type(i, ())])?;
 
         let List(prarms, extend_prarms) = (*prarms).clone();
         let mut prarms = prarms.iter();
 
         let function_name = if *def_headle == "defun" {
-            let name = prarms.next().ok_or_else(|| vec![bad_syntax(&*i)])?;
+            let name = prarms.next().ok_or_else(|| vec![incomplete_expr(&*i)])?;
             let name = symbol_from_sexpr(name);
             if let Err(e) = name.clone() {
                 error_buffer.push(e);
@@ -91,6 +93,7 @@ impl FromSexpr<List, Function> for Function {
                 prarms,
                 extend_prarms: extend_prarms.map(|x| x.unwrap()),
                 bodys,
+                pos
             };
             Ok(r)
         }

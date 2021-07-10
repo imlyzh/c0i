@@ -1,6 +1,6 @@
-use sexpr_ir::gast::{GAst, list::List};
+use sexpr_ir::gast::{GAst, constant::Constant, list::List};
 
-use crate::{ast::{Cond, Expr}, error::{CompilerError, bad_syntax}};
+use crate::{ast::{Cond, Expr}, error::{CompilerError, incomplete_expr, invalid_expr_length, invalid_expr_type, invalid_list_tail}};
 
 use super::FromSexpr;
 
@@ -12,14 +12,23 @@ impl FromSexpr<List, Cond> for Cond {
 
         // check is not tail
         if i.1.is_some() {
-            error_buffer.push(bad_syntax(&*i));
+            error_buffer.push(invalid_list_tail(&*i));
         }
 
         let mut iter = i.0.iter();
-        if iter.next().is_none() {
-            error_buffer.push(bad_syntax(&*i));
+
+        let label = iter.next();
+
+        if label.is_none() {
+            error_buffer.push(incomplete_expr(&*i));
             return Err(error_buffer);
         }
+        let pos = if let GAst::Const(Constant::Sym(l)) = label.unwrap() {
+            l.1.clone()
+        } else {
+            error_buffer.push(invalid_expr_type(&*i, ()));
+            return Err(error_buffer);
+        };
 
         let mut pairs = iter
             .map(pair_from_sexpr)
@@ -42,7 +51,7 @@ impl FromSexpr<List, Cond> for Cond {
         };
 
         if error_buffer.is_empty() {
-            Ok(Cond { pairs, other })
+            Ok(Cond { pairs, other, pos })
         } else {
             Err(error_buffer)
         }
@@ -54,10 +63,10 @@ fn pair_from_sexpr(i: &GAst) -> Result<(Expr, Expr), Vec<CompilerError>> {
     if let GAst::List(i) = i {
         let mut error_buffer = vec![];
         if i.1.is_some() {
-            error_buffer.push(bad_syntax(&*i));
+            error_buffer.push(invalid_list_tail(&*i));
         }
         if i.0.len() != 2 {
-            error_buffer.push(bad_syntax(&*i));
+            error_buffer.push(invalid_expr_length(i, 2, i.0.len()));
         }
         let cond = i.0.get(0).unwrap();
         let expr = i.0.get(1).unwrap();
@@ -76,6 +85,6 @@ fn pair_from_sexpr(i: &GAst) -> Result<(Expr, Expr), Vec<CompilerError>> {
             Err(error_buffer)
         }
     } else {
-        Err(vec![bad_syntax(i)])
+        Err(vec![invalid_expr_type(i, ())])
     }
 }

@@ -1,6 +1,6 @@
-use sexpr_ir::gast::{GAst, Handle, list::List, symbol::Symbol};
+use sexpr_ir::gast::{GAst, Handle, constant::Constant, list::List, symbol::Symbol};
 
-use crate::{ast::{Expr, Let, TopLevel}, error::{CompilerError, bad_syntax}, sexpr_to_ast::symbol_from_sexpr};
+use crate::{ast::{Expr, Let, TopLevel}, error::{CompilerError, incomplete_expr, invalid_expr_length, invalid_expr_type, invalid_list_tail}, sexpr_to_ast::symbol_from_sexpr};
 
 use super::FromSexpr;
 
@@ -11,25 +11,33 @@ impl FromSexpr<List, Let> for Let {
 
         // check is not tail
         if i.1.is_some() {
-            error_buffer.push(bad_syntax(&*i));
+            error_buffer.push(invalid_list_tail(&*i));
         }
 
         let mut iter = i.0.iter();
 
-        if iter.next().is_none() {
-            error_buffer.push(bad_syntax(&*i));
+        let label = iter.next();
+
+        if label.is_none() {
+            error_buffer.push(incomplete_expr(&*i));
             return Err(error_buffer);
         }
+        let pos = if let GAst::Const(Constant::Sym(l)) = label.unwrap() {
+            l.1.clone()
+        } else {
+            error_buffer.push(invalid_expr_type(&*i, ()));
+            return Err(error_buffer);
+        };
 
         // process binds
         let binds = iter
             .next()
-            .ok_or_else(|| vec![bad_syntax(&*i)])?
+            .ok_or_else(|| vec![incomplete_expr(&*i)])?
             .get_list()
-            .ok_or_else(|| vec![bad_syntax(&*i)])?;
+            .ok_or_else(|| vec![invalid_expr_type(&*i, ())])?;
 
         if binds.1.is_some() {
-            error_buffer.push(bad_syntax(&*i));
+            error_buffer.push(invalid_list_tail(&*i));
         }
 
         // binds
@@ -57,7 +65,7 @@ impl FromSexpr<List, Let> for Let {
             });
 
         if error_buffer.is_empty() {
-            Ok(Let { binds, bodys })
+            Ok(Let { binds, bodys, pos })
         } else {
             Err(error_buffer)
         }
@@ -68,10 +76,10 @@ fn bind_from_sexpr(i: &GAst) -> Result<(Handle<Symbol>, Expr), Vec<CompilerError
     if let GAst::List(i) = i {
         let mut error_buffer = vec![];
         if i.1.is_some() {
-            error_buffer.push(bad_syntax(&*i));
+            error_buffer.push(invalid_list_tail(&*i));
         }
         if i.0.len() != 2 {
-            error_buffer.push(bad_syntax(&*i));
+            error_buffer.push(invalid_expr_length(i, 2, i.0.len()));
         }
         let name = i.0.get(0).unwrap();
         let expr = i.0.get(1).unwrap();
@@ -90,6 +98,6 @@ fn bind_from_sexpr(i: &GAst) -> Result<(Handle<Symbol>, Expr), Vec<CompilerError
             Err(error_buffer)
         }
     } else {
-        Err(vec![bad_syntax(i)])
+        Err(vec![invalid_expr_type(&*i, ())])
     }
 }
