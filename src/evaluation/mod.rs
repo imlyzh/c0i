@@ -1,14 +1,18 @@
+pub mod debug_eval;
+pub mod partial_eval;
+pub mod call;
+pub mod partial_call;
 
 use sexpr_ir::gast::Handle;
 
-
 use crate::value::Value;
-use crate::value::callable::{Call, Callable, Closure};
+use crate::value::callable::{Callable, Closure};
 use crate::value::result::CError;
 use crate::value::scope::SimpleScope;
 use crate::value::{result::CResult, scope::Scope};
 
 use crate::ast::*;
+use call::Call;
 
 
 pub trait Eval {
@@ -132,7 +136,7 @@ impl Eval for crate::ast::Call {
         let value = iter.next().unwrap();
         if let Value::Callable(x) = value {
             let args: Vec<_> = iter.collect();
-            x.call(&args)
+            Call::call(&x, &args)
             .map_err(|e| CError::StackBacktrace(x, Handle::new(e)))
         } else {
             Err(CError::ValueIsNotCallable(value))

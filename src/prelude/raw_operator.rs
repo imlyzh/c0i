@@ -2,7 +2,7 @@ use lazy_static::lazy_static;
 
 use sexpr_ir::gast::{Handle, symbol::Symbol};
 
-use crate::{impl_wrap, value::{Pair, Value, Vector, callable::{Call, NativeFunction}, result::{CError, CResult}}};
+use crate::{evaluation::call::Call, impl_wrap, value::{Pair, Value, Vector, callable::NativeFunction, result::{CError, CResult}}};
 
 use super::LOCATION;
 
