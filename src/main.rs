@@ -51,7 +51,6 @@ fn start_repl(env: &Handle<Scope>) -> ! {
         }
         // parse
         let r = repl_parse(&buf).unwrap();
-        println!("parse: {:?}", r);
         // into ast
         match TopLevel::from_sexpr(&r) {
             Err(e) => {
@@ -59,7 +58,6 @@ fn start_repl(env: &Handle<Scope>) -> ! {
                 exit(-1)
             },
             Ok(v) => {
-                println!("parse: {:?}", v);
                 let r = v.eval(&env);
                 match r {
                     Err(e) => println!("Error:\n{}", e),

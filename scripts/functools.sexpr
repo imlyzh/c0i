@@ -15,9 +15,12 @@
 
 
 (defun (list-fold fun init lst)
+    (define h (car lst))
+    (define d (cdr lst))
     (cond
-        [(pair? lst) (fun (fun init (car lst)) (cdr lst))]
-        [else init]))
+        [(pair? d) (list-fold fun (fun init h) d)]
+        [(null? d) (fun init h)]
+        [else (error)]))
 
 
 (defun (list-reduce fun lst)
