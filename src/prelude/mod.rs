@@ -1,6 +1,8 @@
+pub mod error;
 pub mod raw_operator;
 pub mod dynamic_type_check;
 pub mod native_math_operator;
+pub mod native_bool_operator;
 pub mod native_string_operator;
 
 use lazy_static::lazy_static;
@@ -9,10 +11,12 @@ use sexpr_ir::gast::{Handle, symbol::Location};
 
 use crate::value::{Value, callable::Callable, scope::Scope};
 
+use error::*;
 use raw_operator::*;
 use dynamic_type_check::*;
 use native_math_operator::*;
 use native_string_operator::*;
+use native_bool_operator::*;
 
 
 lazy_static! {
@@ -52,6 +56,9 @@ pub fn init() -> Handle<Scope> {
     let record = Scope::new();
     {
         let mut rcd = record.this_level.0.write().unwrap();
+        // error
+        set_wrap!(rcd, ERROR_NAME, ERROR_WRAP);
+        set_wrap!(rcd, UNRECHABLE_NAME, UNRECHABLE_WRAP);
         // list
         set_wrap!(rcd, CAR_NAME, CAR_WRAP);
         set_wrap!(rcd, CDR_NAME, CDR_WRAP);
@@ -61,8 +68,10 @@ pub fn init() -> Handle<Scope> {
         set_wrap!(rcd, VECTOR_REDUCE_NAME, VECTOR_REDUCE_WRAP);
         set_wrap!(rcd, IGNORE_NAME, IGNORE_WRAP);
         set_wrap!(rcd, ID_NAME, ID_WRAP);
-        // display
-        set_wrap!(rcd, DISPLAY_NAME, DISPLAY_WRAP);
+        // to_literal
+        set_wrap!(rcd, LITERAL_NAME, LITERAL_WRAP);
+        // bool
+        set_wrap!(rcd, BOOL_NOT_NAME, BOOL_NOT_WRAP);
         // math
         // add
         set_wrap!(rcd, ADD_INT_NAME, ADD_INT_WRAP);

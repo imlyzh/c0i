@@ -1,4 +1,9 @@
 
+(defun (string v)
+    (cond
+        [(str?) v]
+        [else (literal v)]))
+
 
 (defun (list-map fun lst)
     (cond
@@ -6,7 +11,7 @@
             [h (fun (car lst))]
             [t (list-map (cdr lst))])
             (cons h t))]
-        [else nil]))
+        [else (fun lst)]))
 
 
 (defun (list-fold fun init lst)
@@ -14,12 +19,59 @@
         [(pair? lst) (fun (fun init (car lst)) (cdr lst))]
         [else init]))
 
+
 (defun (list-reduce fun lst)
-    (list-fold fun (car lst) (cdr lst)))
+    (cond
+        [(pair? lst) (list-fold fun (car lst) (cdr lst))]
+        [(null? lst) nil]
+        [else (error lst)]))
+
+
+(defun (fold fun init lst)
+    (list-fold fun init lst))
+
+
+(defun (reduce fun lst)
+    (list-reduce fun lst))
+
+
+;(defun (list? lst)
+;    (cond
+;        [(pair? lst) false]))
 
 
 (defun (+ . args)
-    (cond
-        [(int?) (list-reduce +i args)]
-        [(uint?) (list-reduce +u args)]
-        [(float?) (list-reduce +f args)]))
+    (define fun
+        (cond
+            [(int? (car args)) +i]
+            [(uint? (car args)) +u]
+            [(float? (car args)) +f]))
+    (fold fun 0 args))
+
+
+(defun (- . args)
+    (define fun
+        (cond
+            [(int? (car args)) -i]
+            [(uint? (car args)) -u]
+            [(float? (car args)) -f]))
+    (reduce fun args))
+
+
+(defun (* . args)
+    (define fun
+        (cond
+            [(int? (car args)) *i]
+            [(uint? (car args)) *u]
+            [(float? (car args)) *f]))
+    (fold fun 1 args))
+
+
+(defun (/ . args)
+    (define fun
+        (cond
+            [(int? (car args)) /i]
+            [(uint? (car args)) /u]
+            [(float? (car args)) /f]))
+    (reduce fun args))
+

@@ -1,6 +1,6 @@
 use sexpr_ir::gast::{GAst, list::List};
 
-use crate::{ast::{Call, Expr}, error::{CompilerError, bad_syntax}};
+use crate::{ast::{Call, Expr}, error::{CompilerError, invalid_expr_type}};
 
 use super::FromSexpr;
 
@@ -12,7 +12,7 @@ impl FromSexpr<GAst, Call> for Call {
         if let GAst::List(x) = i {
             call_process(x)
         } else {
-            Err(vec![bad_syntax(i)])
+            Err(vec![invalid_expr_type(i, ())])
         }
     }
 }

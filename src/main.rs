@@ -9,8 +9,8 @@ mod prelude;
 
 
 use std::io::{stdin, stdout, Write};
+use std::process::exit;
 
-use crate::prelude::native_string_operator::display_item;
 use prelude::init;
 use evaluation::Eval;
 use sexpr_ir::gast::Handle;
@@ -28,6 +28,10 @@ fn load_file(path: &str, env: &Handle<Scope>) -> Result<(), CError> {
         .iter()
         .map(TopLevel::from_sexpr)
         .collect();
+    if let Err(x) = file.clone() {
+        println!("Complie Error: {:?}", x);
+        exit(-1);
+    }
     let file = file.unwrap();
     file
         .iter()
@@ -36,39 +40,47 @@ fn load_file(path: &str, env: &Handle<Scope>) -> Result<(), CError> {
 }
 
 
-fn main() {
-    let env = init();
-    let r = load_file("./scripts/boolean_algebra.sexpr", &env);
-    if let Err(e) = r {
-        println!("error: {:?}", e);
-    }
-    let r = load_file("./scripts/functools.sexpr", &env);
-    if let Err(e) = r {
-        println!("error: {:?}", e);
-    }
+fn start_repl(env: &Handle<Scope>) -> ! {
     loop {
         print!(">>> ");
         stdout().flush().unwrap();
         let mut buf = String::new();
         stdin().read_line(&mut buf).unwrap();
-        // parse
         if buf.trim().is_empty() {
             continue;
         }
+        // parse
         let r = repl_parse(&buf).unwrap();
+        println!("parse: {:?}", r);
         // into ast
         match TopLevel::from_sexpr(&r) {
-            Err(e) => println!("error: {:?}", e),
+            Err(e) => {
+                println!("error: {:?}", e);
+                exit(-1)
+            },
             Ok(v) => {
+                println!("parse: {:?}", v);
                 let r = v.eval(&env);
                 match r {
-                    Err(e) => println!("error: {:?}", e),
-                    Ok(v) => {
-                        display_item(v);
-                        println!("");
-                    },
+                    Err(e) => println!("Error:\n{}", e),
+                    Ok(v) => println!("{}", v),
                 }
             }
         }
     }
+}
+
+
+fn main() {
+    let env = init();
+    let std_list = [
+        "./scripts/functools.sexpr"
+    ];
+    std_list.iter().for_each(|i| {
+        let r = load_file(i, &env);
+        if let Err(e) = r {
+            println!("error: {:?}", e);
+        }
+    });
+    start_repl(&env);
 }

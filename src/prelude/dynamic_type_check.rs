@@ -14,7 +14,7 @@ macro_rules! impl_native_is_type {
     ($name:ident, $fun:ident) => {
         fn $name(args: Vec<Value>) -> CResult {
             if args.len() != 1 {
-                return Err(CError::PrarmsIsNotMatching(args));
+                return Err(CError::PrarmsIsNotMatching(1, args.len()));
             }
             Ok(Value::Bool(args.get(0).unwrap().$fun()))
         }

@@ -9,6 +9,7 @@ use crate::value::result::{CResult, CError};
 
 use super::LOCATION;
 
+
 macro_rules! impl_native_num_add {
     ($fn_name:ident, $ctor:ident, $init:expr) => (
         fn $fn_name(args: Vec<Value>) -> CResult {
@@ -17,7 +18,7 @@ macro_rules! impl_native_num_add {
                 if let Value::$ctor(v) = arg {
                     ret += v;
                 } else {
-                    return CResult::Err(CError::TypeError(((), arg)));
+                    return CResult::Err(CError::TypeError((), arg));
                 }
             }
             CResult::Ok(Value::$ctor(ret))
@@ -63,7 +64,7 @@ macro_rules! impl_native_num_sub {
                 if let Value::$ctor(v) = arg {
                     ret -= v;
                 } else {
-                    return CResult::Err(CError::TypeError(((), arg)));
+                    return CResult::Err(CError::TypeError((), arg));
                 }
             }
 
@@ -102,7 +103,7 @@ macro_rules! impl_native_num_mul {
                 if let Value::$ctor(v) = arg {
                     ret *= v;
                 } else {
-                    return CResult::Err(CError::TypeError(((), arg)));
+                    return CResult::Err(CError::TypeError((), arg));
                 }
             }
             CResult::Ok(Value::$ctor(ret))
@@ -145,7 +146,7 @@ macro_rules! impl_native_num_div {
                 if let Value::$ctor(v) = arg {
                     ret = ret.checked_div(v).ok_or(CError::ZeroDivisionError)?;
                 } else {
-                    return CResult::Err(CError::TypeError(((), arg)));
+                    return CResult::Err(CError::TypeError((), arg));
                 }
             }
 
@@ -172,7 +173,7 @@ fn native_div_float(args: Vec<Value>) -> CResult {
         if let Value::Float(v) = arg {
             ret /= v;
         } else {
-            return CResult::Err(CError::TypeError(((), arg)));
+            return CResult::Err(CError::TypeError((), arg));
         }
     }
 
