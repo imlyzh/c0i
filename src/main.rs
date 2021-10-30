@@ -12,7 +12,7 @@ use std::io::{stdin, stdout, Write};
 use std::process::exit;
 
 use prelude::init;
-use evaluation::Eval;
+use evaluation::{Eval, load_file};
 use sexpr_ir::gast::Handle;
 use sexpr_ir::syntax::sexpr::{file_parse, repl_parse};
 use sexpr_to_ast::FromSexpr;
@@ -20,25 +20,6 @@ use sexpr_to_ast::FromSexpr;
 use ast::TopLevel;
 use value::result::CError;
 use value::scope::Scope;
-
-
-fn load_file(path: &str, env: &Handle<Scope>) -> Result<(), CError> {
-    let file = file_parse(path).unwrap();
-    let file: Result<Vec<_>, _> = file
-        .iter()
-        .map(TopLevel::from_sexpr)
-        .collect();
-    if let Err(x) = file.clone() {
-        println!("Complie Error: {:?}", x);
-        exit(-1);
-    }
-    let file = file.unwrap();
-    file
-        .iter()
-        .try_for_each(|x| x.eval(&env).map(|_| ()))?;
-    Ok(())
-}
-
 
 fn start_repl(env: &Handle<Scope>) -> ! {
     loop {

@@ -4,8 +4,12 @@ pub mod call;
 // pub mod partial_call;
 
 
-use sexpr_ir::gast::Handle;
+use std::process::exit;
 
+use sexpr_ir::gast::Handle;
+use sexpr_ir::syntax::sexpr::file_parse;
+
+use crate::sexpr_to_ast::FromSexpr;
 use crate::value::Value;
 use crate::value::callable::{Callable, Closure};
 use crate::value::result::CError;
@@ -20,6 +24,35 @@ pub trait Eval {
     fn eval(&self, env: &Handle<Scope>) -> CResult;
 }
 
+impl Eval for ModuleTop {
+    fn eval(&self, env: &Handle<Scope>) -> CResult {
+        match self {
+            ModuleTop::TopLevel(t) => t.eval(env),
+            ModuleTop::Import(x) => {
+                load_file(todo!(), env);
+                Ok(Value::Nil)
+            },
+        }
+    }
+}
+
+
+pub fn load_file(path: &str, env: &Handle<Scope>) -> Result<(), CError> {
+    let file = file_parse(path).unwrap();
+    let file: Result<Vec<_>, _> = file
+        .iter()
+        .map(TopLevel::from_sexpr)
+        .collect();
+    if let Err(x) = file.clone() {
+        println!("Complie Error: {:?}", x);
+        exit(-1);
+    }
+    let file = file.unwrap();
+    file
+        .iter()
+        .try_for_each(|x| x.eval(&env).map(|_| ()))?;
+    Ok(())
+}
 
 impl Eval for TopLevel {
     fn eval(&self, env: &Handle<Scope>) -> CResult {

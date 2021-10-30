@@ -3,6 +3,15 @@ use sexpr_ir::gast::{Handle, symbol::{Location, Symbol}};
 use crate::value::Value;
 
 #[derive(Debug, Clone)]
+pub enum ModuleTop {
+    Import(Import),
+    TopLevel(TopLevel),
+}
+
+#[derive(Debug, Clone)]
+pub struct Import(pub Handle<Symbol>);
+
+#[derive(Debug, Clone)]
 pub enum TopLevel {
     Function(Handle<Function>),
     Bind(Handle<Symbol>, Expr),
