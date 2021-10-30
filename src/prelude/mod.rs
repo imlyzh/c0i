@@ -64,7 +64,7 @@ pub fn init() -> Handle<Scope> {
         set_wrap!(rcd, CDR_NAME, CDR_WRAP);
         set_wrap!(rcd, CONS_NAME, CONS_WRAP);
         set_wrap!(rcd, VECTOR_NAME, VECTOR_WRAP);
-        set_wrap!(rcd, VECTOR_MAP_NAME, VECTOR_MAP_WRAP);
+        // set_wrap!(rcd, VECTOR_MAP_NAME, VECTOR_MAP_WRAP);
         set_wrap!(rcd, VECTOR_REDUCE_NAME, VECTOR_REDUCE_WRAP);
         set_wrap!(rcd, IGNORE_NAME, IGNORE_WRAP);
         set_wrap!(rcd, ID_NAME, ID_WRAP);

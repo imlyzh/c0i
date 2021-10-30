@@ -2,7 +2,7 @@ pub mod callable;
 pub mod result;
 pub mod scope;
 
-use std::{collections::HashMap, fmt::Display};
+use std::{collections::HashMap, fmt::Display, sync::{Arc, RwLock}};
 
 use callable::Callable;
 use sexpr_ir::gast::{symbol::Symbol, Handle};
@@ -19,7 +19,7 @@ pub enum Value {
     Sym(Handle<Symbol>),
     Pair(Handle<Pair>),
     Dict(Handle<Dict>),
-    Vec(Handle<Vector>),
+    Vec(Vector),
     Callable(Callable),
 }
 
@@ -85,9 +85,9 @@ impl Display for Pair {
 
 impl Display for Vector {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let r = self.0
+        let r = self.0.read().unwrap()
         .iter()
-        .map(Value::to_string)
+        .map(|x| x.read().unwrap().to_string())
         .collect::<Vec<_>>();
         write!(f, "(vec {})", r.join(" "))
     }
@@ -137,7 +137,7 @@ pub struct Pair(pub Value, pub Value);
 pub struct Dict(pub HashMap<Handle<String>, Value>);
 
 #[derive(Debug, Clone)]
-pub struct Vector(pub Vec<Value>);
+pub struct Vector(pub Arc<RwLock<Vec<RwLock<Value>>>>);
 
 
 impl From<&[Value]> for Value {

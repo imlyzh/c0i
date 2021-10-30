@@ -1,7 +1,8 @@
 pub mod debug_eval;
-pub mod partial_eval;
 pub mod call;
-pub mod partial_call;
+// pub mod partial_eval;
+// pub mod partial_call;
+
 
 use sexpr_ir::gast::Handle;
 
@@ -51,10 +52,17 @@ impl Eval for Expr {
             Expr::Cond(x) => x.eval(env),
             Expr::Lambda(x) => x.eval(env),
             Expr::FunctionCall(x) => x.eval(env),
+            Expr::Set(x) => x.eval(env),
         }
     }
 }
 
+impl Eval for Set {
+    fn eval(&self, env: &Handle<Scope>) -> CResult {
+        env.set(&self.name, &self.value.eval(env)?);
+        Ok(Value::Nil)
+    }
+}
 
 impl Eval for Let {
     fn eval(&self, env: &Handle<Scope>) -> CResult {

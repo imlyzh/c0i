@@ -39,6 +39,7 @@ impl FreeVariables for Expr {
             Expr::Cond(v) => v.free_variables(env),
             Expr::FunctionCall(v) => v.free_variables(env),
             Expr::Value(_) => vec![],
+            Expr::Set(_) => todo!(),
         }
     }
 }
@@ -55,10 +56,10 @@ impl FreeVariables for Let {
         .iter()
         .map(|(n, _)| n.clone())
         .collect();
-        
+
         let mut env = env.clone();
         env.append(&mut names);
-        
+
         let mut body_fv: Vec<Handle<Symbol>> = self.bodys
         .iter()
         .flat_map(|x| x.free_variables(&mut env))
@@ -100,7 +101,7 @@ impl FreeVariables for Function {
         if let Some(x) = self.extend_prarms.clone() {
             env.push(x);
         }
-        
+
         let fv_record: Vec<Handle<Symbol>> = self.bodys
         .iter()
         .flat_map(|x| x.free_variables(&mut env))

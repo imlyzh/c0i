@@ -4,8 +4,8 @@ mod error;
 mod evaluation;
 mod sexpr_to_ast;
 mod value;
-mod analysis;
 mod prelude;
+// mod analysis;
 
 
 use std::io::{stdin, stdout, Write};
@@ -50,7 +50,12 @@ fn start_repl(env: &Handle<Scope>) -> ! {
             continue;
         }
         // parse
-        let r = repl_parse(&buf).unwrap();
+        let r = repl_parse(&buf);
+        if r.is_err() {
+            println!("syntax error: {}", r.unwrap_err());
+            continue;
+        }
+        let r = r.unwrap();
         // into ast
         match TopLevel::from_sexpr(&r) {
             Err(e) => {
