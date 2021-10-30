@@ -1,9 +1,49 @@
 use sexpr_ir::gast::{GAst, Handle, constant::Constant, list::List, symbol::Symbol};
 
-use crate::{ast::{Expr, Let, TopLevel}, error::{CompilerError, incomplete_expr, invalid_expr_length, invalid_expr_type, invalid_list_tail}, sexpr_to_ast::symbol_from_sexpr};
+use crate::{ast::{Expr, Let, Set, TopLevel}, error::{CompilerError, incomplete_expr, invalid_expr_length, invalid_expr_type, invalid_list_tail}, sexpr_to_ast::symbol_from_sexpr};
 
 use super::FromSexpr;
 
+impl FromSexpr<List, Set> for Set {
+    fn from_sexpr(i: &List) -> Result<Set, Vec<CompilerError>> {
+        let mut error_buffer = vec![];
+        let mut iter = i.0.iter();
+
+        let label = iter.next();
+
+        if label.is_none() {
+            error_buffer.push(incomplete_expr(&*i));
+            return Err(error_buffer);
+        }
+        let pos = if let GAst::Const(Constant::Sym(l)) = label.unwrap() {
+            l.1.clone()
+        } else {
+            error_buffer.push(invalid_expr_type(&*i, ()));
+            return Err(error_buffer);
+        };
+
+        let name = iter.next();
+        if name.is_none() {
+            error_buffer.push(incomplete_expr(&*i));
+            return Err(error_buffer);
+        }
+        let value = iter.next();
+        if name.is_none() {
+            error_buffer.push(incomplete_expr(&*i));
+            return Err(error_buffer);
+        }
+        let name = name.unwrap();
+        let value = value.unwrap();
+        let name = if let GAst::Const(Constant::Sym(l)) = name {
+            l.clone()
+        } else {
+            error_buffer.push(invalid_expr_type(&*i, ()));
+            return Err(error_buffer);
+        };
+        let value = Expr::from_sexpr(value)?;
+        Ok(Set{ name, value, pos })
+    }
+}
 
 impl FromSexpr<List, Let> for Let {
     fn from_sexpr(i: &List) -> Result<Let, Vec<CompilerError>> {

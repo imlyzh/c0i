@@ -7,7 +7,7 @@ mod bind;
 
 use sexpr_ir::gast::{constant::Constant, list::List, symbol::Symbol, GAst, Handle};
 
-use crate::{ast::{Cond, Expr, Function, Let}, error::CompilerError, value::Value};
+use crate::{ast::{Cond, Expr, Function, Let, Set}, error::CompilerError, value::Value};
 
 use self::{call::call_process, quote::quote_from_sexpr};
 
@@ -34,6 +34,8 @@ fn expr_list_process(i: &List) -> Result<Expr, Vec<CompilerError>> {
     match i.0.get(0).unwrap() {
         GAst::Const(Constant::Sym(n)) if *n.0 == "let" =>
             Let::from_sexpr(i).map(|f| Expr::Let(Handle::new(f))),
+        GAst::Const(Constant::Sym(n)) if *n.0 == "set!" =>
+            Set::from_sexpr(i).map(|f| Expr::Set(Handle::new(f))),
         GAst::Const(Constant::Sym(n)) if *n.0 == "cond" =>
             Cond::from_sexpr(i).map(|f| Expr::Cond(Handle::new(f))),
         GAst::Const(Constant::Sym(n)) if *n.0 == "lambda" =>

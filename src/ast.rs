@@ -15,6 +15,7 @@ pub enum Expr {
     Variable(Handle<Symbol>),
     Lambda(Handle<Function>),
     Let(Handle<Let>),
+    Set(Handle<Set>),
     Cond(Handle<Cond>),
     FunctionCall(Handle<Call>),
 }
@@ -23,6 +24,13 @@ pub enum Expr {
 pub struct Let {
     pub binds: Vec<(Handle<Symbol>, Expr)>,
     pub bodys: Vec<TopLevel>,
+    pub pos: Location,
+}
+
+#[derive(Debug, Clone)]
+pub struct Set {
+    pub name: Handle<Symbol>,
+    pub value: Expr,
     pub pos: Location,
 }
 
