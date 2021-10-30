@@ -1,3 +1,5 @@
+use std::sync::RwLock;
+
 use lazy_static::lazy_static;
 
 use sexpr_ir::gast::{Handle, symbol::Symbol};
@@ -50,12 +52,13 @@ impl_wrap!(CONS_WRAP, CONS_NAME, cons, "cons", &LOCATION);
 
 
 fn vector(args: Vec<Value>) -> CResult {
-    Ok(Value::Vec(Handle::new(Vector(args))))
+    Ok(Value::Vec(Vector(Handle::new(RwLock::new(
+        args.into_iter().map(|x| RwLock::new(x)).collect())))))
 }
 
-impl_wrap!(VECTOR_WRAP, VECTOR_NAME, vector, "vector", &LOCATION);
+impl_wrap!(VECTOR_WRAP, VECTOR_NAME, vector, "make-vector", &LOCATION);
 
-
+/*
 fn vector_map(args: Vec<Value>) -> CResult {
     if args.len() != 2 {
         return Err(CError::PrarmsIsNotMatching(2, args.len()));
@@ -72,15 +75,15 @@ fn vector_map(args: Vec<Value>) -> CResult {
     } else {
         return Err(CError::TypeError((), callable.clone()));
     };
-    let r: Result<Vec<_>, _> = vector.0
+    let r: Result<Vec<_>, _> = vector.0.read().unwrap()
     .iter()
-    .map(|x| callable.call(&[x.clone()]))
+    .map(|x| callable.call(&[x.read().unwrap().clone()]))
     .collect();
     Ok(Value::Vec(Handle::new(Vector(r?))))
 }
 
 impl_wrap!(VECTOR_MAP_WRAP, VECTOR_MAP_NAME, vector_map, "vector-map", &LOCATION);
-
+ */
 
 fn vector_reduce(args: Vec<Value>) -> CResult {
     if args.len() != 2 {
@@ -98,9 +101,10 @@ fn vector_reduce(args: Vec<Value>) -> CResult {
     } else {
         return Err(CError::TypeError((), callable.clone()));
     };
-    let mut iter = vector.0.iter();
-    let init = iter.next().map_or(Value::Nil, Value::clone);
-    iter.try_fold(init, |x, y| callable.call(&[x, y.clone()]))
+    let iter = vector.0.read().unwrap();
+    let mut iter = iter.iter();
+    let init = iter.next().map_or(Value::Nil, |x| x.read().unwrap().clone());
+    iter.try_fold(init, |x, y| callable.call(&[x, y.read().unwrap().clone()]))
 }
 
 impl_wrap!(VECTOR_REDUCE_WRAP, VECTOR_REDUCE_NAME, vector_reduce, "vector-reduce", &LOCATION);

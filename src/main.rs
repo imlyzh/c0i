@@ -4,8 +4,8 @@ mod error;
 mod evaluation;
 mod sexpr_to_ast;
 mod value;
-mod analysis;
 mod prelude;
+// mod analysis;
 
 
 use std::io::{stdin, stdout, Write};

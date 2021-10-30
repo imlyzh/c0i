@@ -1,7 +1,8 @@
 pub mod debug_eval;
-pub mod partial_eval;
 pub mod call;
-pub mod partial_call;
+// pub mod partial_eval;
+// pub mod partial_call;
+
 
 use sexpr_ir::gast::Handle;
 
