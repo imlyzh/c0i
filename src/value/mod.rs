@@ -2,7 +2,7 @@ pub mod callable;
 pub mod result;
 pub mod scope;
 
-use std::{collections::HashMap, fmt::Display, sync::{Arc, RwLock}};
+use std::{collections::HashMap, convert::identity, fmt::Display, sync::{Arc, RwLock}};
 
 use callable::Callable;
 use sexpr_ir::gast::{symbol::Symbol, Handle};
@@ -158,13 +158,15 @@ pub struct Dict(pub HashMap<Handle<String>, Value>);
 pub struct Vector(pub Arc<RwLock<Vec<RwLock<Value>>>>);
 
 impl PartialEq for Vector {
-    fn eq(&self, _other: &Self) -> bool {
-        false
+    fn eq(&self, other: &Self) -> bool {
+        self.0.read().unwrap().iter().zip(other.0.read().unwrap().iter())
+            .map(|(a, b)| *a.read().unwrap() == *b.read().unwrap())
+            .reduce(|a, b| a && b).map_or(false, identity)
     }
 }
 
 impl PartialOrd for Vector {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+    fn partial_cmp(&self, _other: &Self) -> Option<std::cmp::Ordering> {
         None
     }
 }
