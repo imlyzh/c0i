@@ -41,7 +41,7 @@ fn lt(args: Vec<Value>) -> CResult {
     Ok(Value::Bool(a < b))
 }
 
-impl_wrap!(LT_WRAP, LT_NAME, lt, "raw<", &LOCATION);
+impl_wrap!(LT_WRAP, LT_NAME, lt, "<", &LOCATION);
 
 fn gt(args: Vec<Value>) -> CResult {
     if args.len() != 2 {
@@ -52,7 +52,7 @@ fn gt(args: Vec<Value>) -> CResult {
     Ok(Value::Bool(a > b))
 }
 
-impl_wrap!(GT_WRAP, GT_NAME, gt, "raw>", &LOCATION);
+impl_wrap!(GT_WRAP, GT_NAME, gt, ">", &LOCATION);
 
 fn le(args: Vec<Value>) -> CResult {
     if args.len() != 2 {
@@ -63,7 +63,7 @@ fn le(args: Vec<Value>) -> CResult {
     Ok(Value::Bool(a <= b))
 }
 
-impl_wrap!(LE_WRAP, LE_NAME, le, "raw<=", &LOCATION);
+impl_wrap!(LE_WRAP, LE_NAME, le, "<=", &LOCATION);
 
 fn ge(args: Vec<Value>) -> CResult {
     if args.len() != 2 {
@@ -74,4 +74,4 @@ fn ge(args: Vec<Value>) -> CResult {
     Ok(Value::Bool(a >= b))
 }
 
-impl_wrap!(GE_WRAP, GE_NAME, ge, "raw>=", &LOCATION);
+impl_wrap!(GE_WRAP, GE_NAME, ge, ">=", &LOCATION);

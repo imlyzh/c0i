@@ -1,6 +1,6 @@
 pub mod error;
 pub mod raw_operator;
-pub mod eq_ord;
+pub mod native_eq_ord_operator;
 pub mod dynamic_type_check;
 pub mod native_math_operator;
 pub mod native_bool_operator;
@@ -14,7 +14,7 @@ use crate::value::{Value, callable::Callable, scope::Scope};
 
 use error::*;
 use raw_operator::*;
-use eq_ord::*;
+use native_eq_ord_operator::*;
 use dynamic_type_check::*;
 use native_math_operator::*;
 use native_string_operator::*;
