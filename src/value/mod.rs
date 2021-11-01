@@ -2,12 +2,12 @@ pub mod callable;
 pub mod result;
 pub mod scope;
 
-use std::{collections::HashMap, fmt::Display, sync::{Arc, RwLock}};
+use std::{collections::HashMap, convert::identity, fmt::Display, sync::{Arc, RwLock}};
 
 use callable::Callable;
 use sexpr_ir::gast::{symbol::Symbol, Handle};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Value {
     Nil,
     Bool(bool),
@@ -23,6 +23,24 @@ pub enum Value {
     Callable(Callable),
 }
 
+impl PartialOrd for Value {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        match (self, other) {
+            (Value::Nil, Value::Nil) => true.partial_cmp(&true),
+            (Value::Bool(a), Value::Bool(b)) => a.partial_cmp(b),
+            (Value::Char(a), Value::Char(b)) => a.partial_cmp(b),
+            (Value::Uint(a), Value::Uint(b)) => a.partial_cmp(b),
+            (Value::Int(a), Value::Int(b)) => a.partial_cmp(b),
+            (Value::Float(a), Value::Float(b)) => a.partial_cmp(b),
+            (Value::Str(a), Value::Str(b)) => a.partial_cmp(b),
+            (Value::Sym(a), Value::Sym(b)) => a.0.partial_cmp(&b.0),
+            (Value::Pair(_a), Value::Pair(_b)) => None,
+            (Value::Dict(_a), Value::Dict(_b)) => None,
+            (Value::Vec(a), Value::Vec(b)) => a.partial_cmp(b),
+            _ => None,
+        }
+    }
+}
 
 impl Display for Value {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -130,14 +148,28 @@ impl Value {
 }
 
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Pair(pub Value, pub Value);
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Dict(pub HashMap<Handle<String>, Value>);
 
 #[derive(Debug, Clone)]
 pub struct Vector(pub Arc<RwLock<Vec<RwLock<Value>>>>);
+
+impl PartialEq for Vector {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.read().unwrap().iter().zip(other.0.read().unwrap().iter())
+            .map(|(a, b)| *a.read().unwrap() == *b.read().unwrap())
+            .reduce(|a, b| a && b).map_or(false, identity)
+    }
+}
+
+impl PartialOrd for Vector {
+    fn partial_cmp(&self, _other: &Self) -> Option<std::cmp::Ordering> {
+        None
+    }
+}
 
 
 impl From<&[Value]> for Value {

@@ -1,5 +1,6 @@
 pub mod error;
 pub mod raw_operator;
+pub mod eq_ord;
 pub mod dynamic_type_check;
 pub mod native_math_operator;
 pub mod native_bool_operator;
@@ -13,6 +14,7 @@ use crate::value::{Value, callable::Callable, scope::Scope};
 
 use error::*;
 use raw_operator::*;
+use eq_ord::*;
 use dynamic_type_check::*;
 use native_math_operator::*;
 use native_string_operator::*;
@@ -70,8 +72,17 @@ pub fn init() -> Handle<Scope> {
         set_wrap!(rcd, ID_NAME, ID_WRAP);
         // to_literal
         set_wrap!(rcd, LITERAL_NAME, LITERAL_WRAP);
+        // eq ord
+        set_wrap!(rcd, EQ_NAME, EQ_WRAP);
+        set_wrap!(rcd, NE_NAME, NE_WRAP);
+        set_wrap!(rcd, LT_NAME, LT_WRAP);
+        set_wrap!(rcd, GT_NAME, GT_WRAP);
+        set_wrap!(rcd, LE_NAME, LE_WRAP);
+        set_wrap!(rcd, GE_NAME, GE_WRAP);
         // bool
         set_wrap!(rcd, BOOL_NOT_NAME, BOOL_NOT_WRAP);
+        set_wrap!(rcd, BOOL_AND_NAME, BOOL_AND_WRAP);
+        set_wrap!(rcd, BOOL_OR_NAME, BOOL_OR_WRAP);
         // math
         // add
         set_wrap!(rcd, ADD_INT_NAME, ADD_INT_WRAP);

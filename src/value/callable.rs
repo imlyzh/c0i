@@ -28,6 +28,12 @@ pub enum Callable {
     Native(Handle<NativeFunction>),
 }
 
+impl PartialEq for Callable {
+    fn eq(&self, _other: &Self) -> bool {
+        false
+    }
+}
+
 
 impl Display for Callable {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
