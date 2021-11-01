@@ -1,6 +1,6 @@
+pub mod quote;
 mod function;
 mod top_level;
-mod quote;
 mod call;
 mod cond;
 mod bind;

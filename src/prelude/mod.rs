@@ -61,6 +61,8 @@ pub fn init() -> Handle<Scope> {
         // error
         set_wrap!(rcd, ERROR_NAME, ERROR_WRAP);
         set_wrap!(rcd, UNRECHABLE_NAME, UNRECHABLE_WRAP);
+        // read
+        set_wrap!(rcd, READ_NAME, READ_WRAP);
         // list
         set_wrap!(rcd, CAR_NAME, CAR_WRAP);
         set_wrap!(rcd, CDR_NAME, CDR_WRAP);

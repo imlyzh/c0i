@@ -5,7 +5,7 @@ use crate::{ast::Expr, error::CompilerError, sexpr_to_ast::FromSexpr, value::{Pa
 
 
 
-pub(crate) fn quote_from_sexpr(i: &List) -> Result<Value, Vec<CompilerError>> {
+pub fn quote_from_sexpr(i: &List) -> Result<Value, Vec<CompilerError>> {
     let mut error_buffer = vec![];
     if i.1.is_some() {
         error_buffer.push(CompilerError::BadSyntax(i.to_string()));
@@ -24,7 +24,7 @@ pub(crate) fn quote_from_sexpr(i: &List) -> Result<Value, Vec<CompilerError>> {
     Ok(r)
 }
 
-fn value_from_sexpr(i: &GAst) -> Value {
+pub fn value_from_sexpr(i: &GAst) -> Value {
     match i {
         GAst::Const(x) => {
             let r = Value::from_sexpr(x).unwrap();
@@ -38,7 +38,7 @@ fn value_from_sexpr(i: &GAst) -> Value {
     }
 }
 
-fn list_from_sexpr(i: &List) -> Pair {
+pub fn list_from_sexpr(i: &List) -> Pair {
     let List(i, pair_right) = i;
     let right = pair_right
         .clone()
