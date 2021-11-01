@@ -45,7 +45,7 @@ pub fn load_file(path: &str, env: &Handle<Scope>) -> Result<(), CError> {
         .map(TopLevel::from_sexpr)
         .collect();
     if let Err(x) = file.clone() {
-        println!("Complie Error: {:?}", x);
+        println!("Compile Error: {:?}", x);
         exit(-1);
     }
     let file = file.unwrap();

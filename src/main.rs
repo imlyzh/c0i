@@ -1,12 +1,9 @@
-#![feature(unchecked_math)]
 mod ast;
 mod error;
 mod evaluation;
 mod sexpr_to_ast;
 mod value;
 mod prelude;
-// mod analysis;
-
 
 use std::io::{stdin, stdout, Write};
 use std::process::exit;
