@@ -54,14 +54,20 @@ fn start_repl(env: &Handle<Scope>) -> ! {
     }
 }
 
+use std::env;
 
 fn main() {
     let env = init();
+    /*
     let std_list = [
         "./scripts/functools.sexpr"
     ];
-    std_list.iter().for_each(|i| {
-        let r = load_file(i, &env);
+     */
+    let mut args = env::args();
+    args.next();
+
+    args.for_each(|i| {
+        let r = load_file(&i, &env);
         if let Err(e) = r {
             println!("error: {:?}", e);
         }

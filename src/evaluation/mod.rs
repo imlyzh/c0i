@@ -24,6 +24,7 @@ pub trait Eval {
     fn eval(&self, env: &Handle<Scope>) -> CResult;
 }
 
+/*
 impl Eval for ModuleTop {
     fn eval(&self, env: &Handle<Scope>) -> CResult {
         match self {
@@ -35,7 +36,7 @@ impl Eval for ModuleTop {
         }
     }
 }
-
+ */
 
 pub fn load_file(path: &str, env: &Handle<Scope>) -> Result<(), CError> {
     let file = file_parse(path).unwrap();
