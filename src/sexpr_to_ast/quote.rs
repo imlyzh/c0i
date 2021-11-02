@@ -34,20 +34,23 @@ pub fn value_from_sexpr(i: &GAst) -> Value {
                 _ => unreachable!(),
             }
         }
-        GAst::List(i) => Value::Pair(Handle::new(list_from_sexpr(i))),
+        GAst::List(i) => list_from_sexpr(i),
     }
 }
 
-pub fn list_from_sexpr(i: &List) -> Pair {
+pub fn list_from_sexpr(i: &List) -> Value {
     let List(i, pair_right) = i;
     let right = pair_right
         .clone()
         .map_or_else(|| Value::Nil, |x| value_from_sexpr(&x));
     let mut iter = i.iter().rev();
-    let left = iter
-        .next()
-        .map_or_else(|| Value::Nil, |x| value_from_sexpr(&x));
-    iter.fold(Pair(left, right), |prev, i| {
-        Pair(value_from_sexpr(i), Value::Pair(Handle::new(prev)))
-    })
+    let left = iter.next();
+    if let Some(x) = left {
+        let r = iter.fold(Pair(value_from_sexpr(&x), right), |prev, i| {
+            Pair(value_from_sexpr(i), Value::Pair(Handle::new(prev)))
+        });
+        Value::Pair(Handle::new(r))
+    } else {
+        right
+    }
 }
