@@ -5,6 +5,7 @@ pub mod dynamic_type_check;
 pub mod native_math_operator;
 pub mod native_bool_operator;
 pub mod native_string_operator;
+pub mod native_dict_operator;
 
 use lazy_static::lazy_static;
 
@@ -19,6 +20,7 @@ use dynamic_type_check::*;
 use native_math_operator::*;
 use native_string_operator::*;
 use native_bool_operator::*;
+use native_dict_operator::*;
 
 
 lazy_static! {
@@ -68,6 +70,8 @@ pub fn init() -> Handle<Scope> {
         set_wrap!(rcd, CDR_NAME, CDR_WRAP);
         set_wrap!(rcd, CONS_NAME, CONS_WRAP);
         set_wrap!(rcd, VECTOR_NAME, VECTOR_WRAP);
+        //dict
+        set_wrap!(rcd, MAKE_DICT_NAME, MAKE_DICT);
         // set_wrap!(rcd, VECTOR_MAP_NAME, VECTOR_MAP_WRAP);
         set_wrap!(rcd, VECTOR_REDUCE_NAME, VECTOR_REDUCE_WRAP);
         set_wrap!(rcd, IGNORE_NAME, IGNORE_WRAP);

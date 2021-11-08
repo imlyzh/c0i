@@ -51,14 +51,9 @@ impl Display for Callable {
 
 impl Function {
     pub fn match_args(&self, args: &[Value]) -> Result<SimpleScope, CError> {
-        if args.len() == self.prarms.len() {
-            let record: HashMap<Handle<Symbol>, Value> = self.prarms
-            .iter()
-            .zip(args.iter())
-            .map(|(k, v)| (k.clone(), v.clone()))
-            .collect();
-            Ok(SimpleScope::from(record))
-        } else if self.extend_prarms.is_some() && args.len() > self.prarms.len() {
+        dbg!(self);
+        dbg!(args);
+        if self.extend_prarms.is_some() && args.len() >= self.prarms.len() {
             let mut record: HashMap<Handle<Symbol>, Value> = self.prarms
             .iter()
             .zip(args[..self.prarms.len()].iter())
@@ -67,6 +62,13 @@ impl Function {
             record.insert(
                 self.extend_prarms.clone().unwrap(),
                 Value::from(&args[self.prarms.len()..]));
+            Ok(SimpleScope::from(record))
+        } else if args.len() == self.prarms.len() {
+            let record: HashMap<Handle<Symbol>, Value> = self.prarms
+            .iter()
+            .zip(args.iter())
+            .map(|(k, v)| (k.clone(), v.clone()))
+            .collect();
             Ok(SimpleScope::from(record))
         } else {
             Err(CError::PrarmsIsNotMatching(self.prarms.len(), args.len()))

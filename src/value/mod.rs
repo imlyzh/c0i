@@ -18,7 +18,7 @@ pub enum Value {
     Str(Handle<String>),
     Sym(Handle<Symbol>),
     Pair(Handle<Pair>),
-    Dict(Handle<Dict>),
+    Dict(Dict),
     Vec(Vector),
     Callable(Callable),
 }
@@ -113,7 +113,7 @@ impl Display for Vector {
 
 impl Display for Dict {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let r = self.0.iter()
+        let r = self.0.read().unwrap().iter()
             .map(|(k, v)| format!("'(\"{}\" . {})", k, v))
             .collect::<Vec<_>>();
         write!(f, "(dict {})", r.join(" "))
@@ -151,8 +151,14 @@ impl Value {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Pair(pub Value, pub Value);
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct Dict(pub HashMap<Handle<String>, Value>);
+#[derive(Debug, Clone, Default)]
+pub struct Dict(pub Arc<RwLock<HashMap<Handle<String>, Value>>>);
+
+impl PartialEq for Dict {
+    fn eq(&self, _other: &Self) -> bool {
+        false
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct Vector(pub Arc<RwLock<Vec<RwLock<Value>>>>);
