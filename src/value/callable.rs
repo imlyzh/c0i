@@ -51,8 +51,6 @@ impl Display for Callable {
 
 impl Function {
     pub fn match_args(&self, args: &[Value]) -> Result<SimpleScope, CError> {
-        dbg!(self);
-        dbg!(args);
         if self.extend_prarms.is_some() && args.len() >= self.prarms.len() {
             let mut record: HashMap<Handle<Symbol>, Value> = self.prarms
             .iter()
