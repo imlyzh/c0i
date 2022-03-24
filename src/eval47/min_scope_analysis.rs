@@ -124,7 +124,29 @@ impl Scope {
         } else if let Some(func_id) = self.functions.get(name) {
             Some(MantisGod::Middle(*func_id))
         } else {
-            todo!()
+            self.lookup_with_parent(ctx, name)
+        }
+    }
+
+    fn lookup_with_parent(&mut self, ctx: &mut LookupContext, name: &str) -> Option<LookupResult> {
+        if let Some(parent) = self.parent.as_mut() {
+            let result = parent.lookup(ctx, name);
+            if let Some(inner) = result.as_ref() {
+                if let MantisGod::Left(variable) = inner {
+                    if let Some(function_frame) = self.function_frame.as_mut() {
+                        let capture_id = function_frame.captures.len();
+                        function_frame.captures.insert(
+                            name.to_string(),
+                            (capture_id, variable.0, variable.1)
+                        );
+
+                        self.variables.insert(name.to_string(), (true, capture_id));
+                    }
+                }
+            }
+            result
+        } else {
+            None
         }
     }
 }

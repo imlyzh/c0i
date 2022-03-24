@@ -76,7 +76,7 @@ impl<T1, T2, T3> MantisGod<T1, T2, T3> {
 pub fn clone_signature(signature: &Signature) -> Signature {
     Signature {
         func_type: signature.func_type,
-        param_options: signature.param_options.iter().collect(),
-        ret_option: signature.ret_option.iter().collect()
+        param_options: signature.param_options.iter().map(|x| *x).collect(),
+        ret_option: signature.ret_option.iter().map(|x| *x).collect()
     }
 }
