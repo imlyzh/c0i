@@ -4,7 +4,7 @@ use std::marker::PhantomData;
 use crate::ast::TopLevel;
 use crate::eval47::commons::{FFIAsyncFunction, FFIFunction, Signature};
 use crate::eval47::data_map::{DataCollection, GValue};
-use crate::eval47::util::MantisGod;
+use crate::eval47::util::{clone_signature, MantisGod};
 
 pub struct AnalyseContext {
     ffi_functions: HashMap<String, (FFIFunction, Signature)>,
@@ -88,13 +88,43 @@ impl Scope {
 
     fn lookup(&mut self, ctx: &mut LookupContext, name: &str) -> Option<LookupResult> {
         if let Some(variable) = self.variables.get(name) {
-            Some(MantisGod::Variable(variable.clone()))
+            Some(MantisGod::Left(variable.clone()))
         } else if let Some((ffi_function, signature)) = ctx.0.get(name) {
-            if !ctx.2.ffi_function_in_use.contains_key(name) {
-                ctx.2.ffi_function_in_use.insert(name.to_string(), (ffi_function.clone(), signature.clone(), 0));
-            }
+            let func_id = if !ctx.2.ffi_function_in_use.contains_key(name) {
+                let func_id = ctx.2.ffi_function_in_use.len();
+                ctx.2.ffi_function_in_use.insert(
+                    name.to_string(),
+                    (
+                        ffi_function.clone(),
+                        clone_signature(signature),
+                        func_id
+                    )
+                );
+                func_id
+            } else {
+                ctx.2.ffi_function_in_use.get(name).unwrap().2
+            };
+            Some(MantisGod::Right((false, func_id)))
+        } else if let Some((async_ffi_function, signature)) = ctx.1.get(name) {
+            let func_id = if !ctx.2.async_ffi_function_in_use.contains_key(name) {
+                let func_id = ctx.2.async_ffi_function_in_use.len();
+                ctx.2.async_ffi_function_in_use.insert(
+                    name.to_string(),
+                    (
+                        async_ffi_function.clone(),
+                        clone_signature(signature),
+                        func_id
+                    )
+                );
+                func_id
+            } else {
+                ctx.2.async_ffi_function_in_use.get(name).unwrap().2
+            };
+            Some(MantisGod::Right((true, func_id)))
+        } else if let Some(func_id) = self.functions.get(name) {
+            Some(MantisGod::Middle(*func_id))
         } else {
-            None
+            todo!()
         }
     }
 }

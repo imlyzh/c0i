@@ -1,5 +1,7 @@
 use std::mem::transmute;
 
+use crate::eval47::commons::Signature;
+
 #[cfg(target_pointer_width = "32")]
 pub fn bitcast_usize_i64(src: usize) -> i64 {
     unsafe { transmute(src as u64) }
@@ -68,5 +70,13 @@ impl<T1, T2, T3> MantisGod<T1, T2, T3> {
             MantisGod::Right(x) => Some(x),
             _ => None,
         }
+    }
+}
+
+pub fn clone_signature(signature: &Signature) -> Signature {
+    Signature {
+        func_type: signature.func_type,
+        param_options: signature.param_options.iter().collect(),
+        ret_option: signature.ret_option.iter().collect()
     }
 }
