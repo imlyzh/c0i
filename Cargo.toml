@@ -21,4 +21,17 @@ path = "examples/free_variables.rs"
 
 [dependencies]
 lazy_static = "^1.4.*"
-sexpr_ir = { git="http://github.com/imlyzh/sexpr_ir" }
+sexpr_ir = { git="https://github.com/imlyzh/sexpr_ir" }
+pr47 = { git="https://github.com/Pr47/Pr47", default-features=false, features=[
+    "al31f",
+    "al31f-builtin-ops",
+    "optimized-rtlc",
+    "async",
+    "async-tokio"
+] }
+xjbutil = { git="https://github.com/Pr47/xjbutil", default-features=false, features=[
+    "slice-arena",
+    "either",
+    "value",
+    "value-serde"
+] }
