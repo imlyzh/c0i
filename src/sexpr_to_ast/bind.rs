@@ -105,7 +105,7 @@ impl FromSexpr<List, Let> for Let {
             });
 
         if error_buffer.is_empty() {
-            Ok(Let { binds, bodys, pos })
+            Ok(Let { binds, body: bodys, pos })
         } else {
             Err(error_buffer)
         }

@@ -60,7 +60,7 @@ impl FreeVariables for Let {
         let mut env = env.clone();
         env.append(&mut names);
 
-        let mut body_fv: Vec<Handle<Symbol>> = self.bodys
+        let mut body_fv: Vec<Handle<Symbol>> = self.body
         .iter()
         .flat_map(|x| x.free_variables(&mut env))
         .collect();

@@ -32,7 +32,7 @@ pub enum Expr {
 #[derive(Debug, Clone)]
 pub struct Let {
     pub binds: Vec<(Handle<Symbol>, Expr)>,
-    pub bodys: Vec<TopLevel>,
+    pub body: Vec<TopLevel>,
     pub pos: Location,
 }
 
