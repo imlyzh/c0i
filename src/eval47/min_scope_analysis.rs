@@ -4,8 +4,9 @@ use std::marker::PhantomData;
 
 use pr47::data::tyck::TyckInfoPool;
 use sexpr_ir::gast::Handle;
+use sexpr_ir::gast::symbol::Symbol;
 
-use crate::ast::{Expr, Function, TopLevel};
+use crate::ast::{Expr, Function, Let, TopLevel};
 use crate::eval47::commons::{FFIAsyncFunction, FFIFunction, Signature};
 use crate::eval47::data_map::{DataCollection, GValue};
 use crate::eval47::util::{bitcast_usize_i64, clone_signature, MantisGod};
@@ -139,9 +140,9 @@ impl AnalyseContext {
     ) {
         match expr {
             Expr::Value(value) => self.analyze_value(result, scope_chain, value),
-            Expr::Variable(_) => {}
-            Expr::Lambda(_) => {}
-            Expr::Let(_) => {}
+            Expr::Variable(var) => self.analyze_variable(result, scope_chain, var.clone()),
+            Expr::Lambda(func) => self.analyze_function(result, scope_chain, func.clone()),
+            Expr::Let(let_item) => self.analyze_let(result, scope_chain, let_item.clone()),
             Expr::Set(_) => {}
             Expr::Cond(_) => {}
             Expr::FunctionCall(_) => {}
@@ -176,6 +177,54 @@ impl AnalyseContext {
             _ => {}
         }
     }
+
+    fn analyze_variable(
+        &mut self,
+        result: &mut AnalyseResult,
+        scope_chain: &mut Option<Box<Scope>>,
+        var: Handle<Symbol>
+    ) {
+        let mut lookup_context = (
+            &self.ffi_functions,
+            &self.async_ffi_functions,
+            result
+        );
+        let lookup_result = scope_chain.as_mut()
+            .unwrap()
+            .lookup(&mut lookup_context, var.0.as_str())
+            .expect("undefined variable");
+
+        match lookup_result {
+            MantisGod::Left((is_capture, var_id)) => {
+                lookup_context.2.data_collection.insert(
+                    var.as_ref(),
+                    "Ref",
+                    &["Variable".into(), is_capture.into(), bitcast_usize_i64(var_id).into()] as &[GValue]
+                );
+            },
+            MantisGod::Middle(func_id) => {
+                lookup_context.2.data_collection.insert(
+                    var.as_ref(),
+                    "Ref",
+                    &["Function".into(), bitcast_usize_i64(func_id).into()] as &[GValue]
+                )
+            }
+            MantisGod::Right((is_async, ffi_func_id)) => {
+                lookup_context.2.data_collection.insert(
+                    var.as_ref(),
+                    "Ref",
+                    &["FFI".into(), is_async.into(), bitcast_usize_i64(ffi_func_id).into()] as &[GValue]
+                )
+            }
+        }
+    }
+
+    fn analyze_let(
+        &mut self,
+        _result: &mut AnalyseResult,
+        _scope_chain: &mut Option<Box<Scope>>,
+        _let_item: Handle<Let>
+    ) {}
 }
 
 pub struct AnalyseResult<'a> {
@@ -227,10 +276,10 @@ type LookupResult = MantisGod<
     (bool, usize) // FFI function
 >;
 
-type LookupContext<'a> = (
+type LookupContext<'a, 'b> = (
     &'a HashMap<String, (FFIFunction, Signature)>,
     &'a HashMap<String, (FFIAsyncFunction, Signature)>,
-    &'a mut AnalyseResult<'a>
+    &'a mut AnalyseResult<'b>
 );
 
 impl Scope {
