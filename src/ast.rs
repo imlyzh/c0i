@@ -56,8 +56,8 @@ pub struct Call(pub Vec<Expr>);
 #[derive(Debug, Clone)]
 pub struct Function {
     pub name: Option<Handle<Symbol>>,
-    pub prarms: Vec<Handle<Symbol>>,
-    pub extend_prarms: Option<Handle<Symbol>>,
-    pub bodys: Vec<TopLevel>,
+    pub params: Vec<Handle<Symbol>>,
+    pub extend_params: Option<Handle<Symbol>>,
+    pub body: Vec<TopLevel>,
     pub pos: Location,
 }

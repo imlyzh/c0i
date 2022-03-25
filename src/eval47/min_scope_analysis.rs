@@ -83,9 +83,16 @@ impl AnalyseContext {
         &mut self,
         _result: &mut AnalyseResult,
         scope_chain: &mut Option<Box<Scope>>,
-        _func: Handle<Function>
+        func: Handle<Function>
     ) {
         *scope_chain = Some(Box::new(Scope::new_function_frame(scope_chain.take())));
+
+        for param in func.params.iter() {
+            scope_chain.as_mut().unwrap().add_var(param.0.as_str());
+        }
+        if let Some(extend_param) = func.extend_params.as_ref() {
+            scope_chain.as_mut().unwrap().add_var(extend_param.0.as_str());
+        }
 
         *scope_chain = scope_chain.take().unwrap().parent;
     }
