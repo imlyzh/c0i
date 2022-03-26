@@ -26,7 +26,7 @@ pub enum Expr {
     Let(Handle<Let>),
     Set(Handle<Set>),
     Cond(Handle<Cond>),
-    FunctionCall(Handle<Call>),
+    FunctionCall(Handle<Call>)
 }
 
 #[derive(Debug, Clone)]

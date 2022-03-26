@@ -6,7 +6,7 @@ use pr47::data::tyck::TyckInfoPool;
 use sexpr_ir::gast::Handle;
 use sexpr_ir::gast::symbol::Symbol;
 
-use crate::ast::{Expr, Function, Let, TopLevel};
+use crate::ast::{Call, Cond, Expr, Function, Let, Set, TopLevel};
 use crate::eval47::commons::{FFIAsyncFunction, FFIFunction, Signature};
 use crate::eval47::data_map::{DataCollection, GValue};
 use crate::eval47::util::{bitcast_usize_i64, clone_signature, MantisGod};
@@ -143,9 +143,9 @@ impl AnalyseContext {
             Expr::Variable(var) => self.analyze_variable(result, scope_chain, var.clone()),
             Expr::Lambda(func) => self.analyze_function(result, scope_chain, func.clone()),
             Expr::Let(let_item) => self.analyze_let(result, scope_chain, let_item.clone()),
-            Expr::Set(_) => {}
-            Expr::Cond(_) => {}
-            Expr::FunctionCall(_) => {}
+            Expr::Set(set_item) => self.analyze_set(result, scope_chain, set_item.clone()),
+            Expr::Cond(cond) => self.analyze_cond(result, scope_chain, cond.clone()),
+            Expr::FunctionCall(call) => self.analyze_call(result, scope_chain, call.clone()),
         }
     }
 
@@ -194,26 +194,30 @@ impl AnalyseContext {
             .lookup(&mut lookup_context, var.0.as_str())
             .expect("undefined variable");
 
+        let (_, _, result) = lookup_context;
+
         match lookup_result {
             MantisGod::Left((is_capture, var_id)) => {
-                lookup_context.2.data_collection.insert(
+                result.data_collection.insert(
                     var.as_ref(),
                     "Ref",
-                    &["Variable".into(), is_capture.into(), bitcast_usize_i64(var_id).into()] as &[GValue]
+                    &["Variable".into(), is_capture.into(), bitcast_usize_i64(var_id).into()]
+                        as &[GValue]
                 );
             },
             MantisGod::Middle(func_id) => {
-                lookup_context.2.data_collection.insert(
+                result.data_collection.insert(
                     var.as_ref(),
                     "Ref",
                     &["Function".into(), bitcast_usize_i64(func_id).into()] as &[GValue]
                 )
-            }
+            },
             MantisGod::Right((is_async, ffi_func_id)) => {
-                lookup_context.2.data_collection.insert(
+                result.data_collection.insert(
                     var.as_ref(),
                     "Ref",
-                    &["FFI".into(), is_async.into(), bitcast_usize_i64(ffi_func_id).into()] as &[GValue]
+                    &["FFI".into(), is_async.into(), bitcast_usize_i64(ffi_func_id).into()]
+                        as &[GValue]
                 )
             }
         }
@@ -221,10 +225,106 @@ impl AnalyseContext {
 
     fn analyze_let(
         &mut self,
-        _result: &mut AnalyseResult,
-        _scope_chain: &mut Option<Box<Scope>>,
-        _let_item: Handle<Let>
-    ) {}
+        result: &mut AnalyseResult,
+        scope_chain: &mut Option<Box<Scope>>,
+        let_item: Handle<Let>
+    ) {
+        for bind in let_item.binds.iter() {
+            self.analyze_expr(result, scope_chain, &bind.1);
+            let var_id = scope_chain.as_mut().unwrap().add_var(bind.0.0.as_ref());
+            result.data_collection.insert(
+                let_item.as_ref(),
+                "VarID",
+                 bitcast_usize_i64(var_id)
+            );
+        }
+
+        self.analyze_stmt_list(result, scope_chain, &let_item.body);
+    }
+
+    fn analyze_set(
+        &mut self,
+        result: &mut AnalyseResult,
+        scope_chain: &mut Option<Box<Scope>>,
+        set: Handle<Set>
+    ) {
+        self.analyze_expr(result, scope_chain, &set.value);
+
+        let mut lookup_context = (
+            &self.ffi_functions,
+            &self.async_ffi_functions,
+            result
+        );
+        let lookup_result = scope_chain.as_mut().unwrap()
+            .lookup(&mut lookup_context, set.name.0.as_str())
+            .expect("variable not defined");
+        match lookup_result {
+            LookupResult::Left((is_capture, _)) => if is_capture {
+                panic!("cannot use `set!` on a captured variable");
+            },
+            LookupResult::Middle(_) => panic!("cannot use `set!` on a function"),
+            LookupResult::Right(_) => panic!("cannot use `set!` on a FFI function")
+        }
+    }
+
+    fn analyze_cond(
+        &mut self,
+        result: &mut AnalyseResult,
+        scope_chain: &mut Option<Box<Scope>>,
+        cond: Handle<Cond>
+    ) {
+        for pair in cond.pairs.iter() {
+            self.analyze_expr(result, scope_chain, &pair.0);
+            self.analyze_expr(result, scope_chain, &pair.1);
+        }
+
+        if let Some(other) = cond.other.as_ref() {
+            self.analyze_expr(result, scope_chain, other);
+        }
+    }
+
+    fn analyze_call(
+        &mut self,
+        result: &mut AnalyseResult,
+        scope_chain: &mut Option<Box<Scope>>,
+        call: Handle<Call>
+    ) {
+        for arg in call.0.iter() {
+            self.analyze_expr(result, scope_chain, arg);
+        }
+    }
+
+    fn analyze_stmt_list(
+        &mut self,
+        result: &mut AnalyseResult,
+        scope_chain: &mut Option<Box<Scope>>,
+        stmts: &[TopLevel]
+    ) {
+        *scope_chain = Some(Box::new(Scope::new(scope_chain.take())));
+
+        for maybe_func in stmts {
+            if let TopLevel::Function(func_handle) = maybe_func {
+                let func_id = scope_chain.as_mut().unwrap().add_func(
+                    func_handle.name
+                        .as_ref()
+                        .expect("Why the function name is empty anyway?")
+                        .0
+                        .as_str()
+                );
+                result.data_collection.insert(
+                    func_handle.as_ref(),
+                    "FunctionID",
+                    bitcast_usize_i64(func_id)
+                );
+            }
+        }
+
+        for stmt in stmts {
+            self.analyze_stmt(result, scope_chain, stmt);
+        }
+
+        *scope_chain = scope_chain.take().unwrap().parent;
+    }
 }
 
 pub struct AnalyseResult<'a> {
