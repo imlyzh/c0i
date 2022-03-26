@@ -10,6 +10,9 @@ edition = "2018"
 name = "c0i"
 path = "src/main.rs"
 
+[[bin]]
+name = "c047"
+path = "src/eval47/main.rs"
 
 [lib]
 name = "c0ilib"

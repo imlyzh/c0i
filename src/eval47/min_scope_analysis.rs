@@ -12,6 +12,8 @@ use crate::eval47::data_map::{DataCollection, GValue};
 use crate::eval47::util::{bitcast_usize_i64, clone_signature, MantisGod};
 use crate::value::Value;
 
+pub const BUILTIN_OPS: &'static [&'static str] = &["=", "+", "-", "*", "/", "%"];
+
 pub struct AnalyseContext {
     tyck_info_pool: TyckInfoPool,
     ffi_functions: HashMap<String, (FFIFunction, Signature)>,
@@ -184,6 +186,10 @@ impl AnalyseContext {
         scope_chain: &mut Option<Box<Scope>>,
         var: Handle<Symbol>
     ) {
+        if BUILTIN_OPS.contains(&var.0.as_str()) {
+            return;
+        }
+
         let mut lookup_context = (
             &self.ffi_functions,
             &self.async_ffi_functions,

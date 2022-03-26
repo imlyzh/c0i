@@ -4,6 +4,7 @@ use xjbutil::value::Value;
 pub type GValue = Value;
 pub type DataMap = HashMap<String, GValue>;
 
+#[derive(Debug)]
 pub struct DataCollection(HashMap<usize, DataMap>);
 
 impl DataCollection {
