@@ -124,6 +124,16 @@ impl AnalyseContext {
         result.data_collection.insert(func.as_ref(), "ParamVarIDs", var_ids);
 
         self.analyze_stmt_list(result, scope_chain, &func.body);
+        result.data_collection.insert(
+            func.as_ref(),
+            "Captures",
+            scope_chain.as_ref().unwrap().func_captures()
+        );
+        result.data_collection.insert(
+            func.as_ref(),
+            "BaseFrameSize",
+            bitcast_usize_i64(scope_chain.as_ref().unwrap().base_frame_size())
+        );
 
         *scope_chain = scope_chain.take().unwrap().parent;
     }
@@ -177,7 +187,7 @@ impl AnalyseContext {
             Expr::Let(let_item) => self.analyze_let(result, scope_chain, let_item.clone()),
             Expr::Set(set_item) => self.analyze_set(result, scope_chain, set_item.clone()),
             Expr::Cond(cond) => self.analyze_cond(result, scope_chain, cond.clone()),
-            Expr::FunctionCall(call) => self.analyze_call(result, scope_chain, call.clone()),
+            Expr::FunctionCall(call) => self.analyze_call(result, scope_chain, call.clone())
         }
     }
 
@@ -571,5 +581,28 @@ impl Scope {
             self.function_counter += 1;
             func
         }
+    }
+
+    fn func_captures(&self) -> Vec<Vec<GValue>> {
+        let mut captures = self.function_frame.as_ref().unwrap()
+            .captures
+            .iter()
+            .map(|(_, v)| v)
+            .collect::<Vec<_>>();
+        captures.sort_by(|(x, _, _), (y, _, _)| x.cmp(y));
+        captures.iter()
+            .map(|(_, is_capture, captured_item)| vec![
+                (*is_capture).into(),
+                bitcast_usize_i64(*captured_item).into()
+            ])
+            .collect()
+    }
+
+    fn base_frame_size(&self) -> usize {
+        self.function_frame.as_ref().unwrap()
+            .register_alloc
+        + self.function_frame.as_ref().unwrap()
+            .captures
+            .len()
     }
 }

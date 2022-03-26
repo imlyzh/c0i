@@ -18,6 +18,10 @@ fn main() {
         top_levels.push(TopLevel::from_sexpr(&piece).unwrap());
     }
     for arg in args.iter() {
+        if arg.starts_with("--") {
+            continue;
+        }
+
         eprintln!("Transforming source file {}", arg);
         let file = file_parse(arg.as_str()).unwrap();
         for piece in file {
@@ -29,5 +33,8 @@ fn main() {
     let context = AnalyseContext::new();
     let analyse_result = context.min_scope_analyse(&top_levels);
     let result = serde_json::to_string_pretty(&analyse_result.data_collection).unwrap();
-    eprintln!("{}", result);
+
+    if args.contains(&"--only-analyse".to_string()) {
+        println!("\n{}", result);
+    }
 }
