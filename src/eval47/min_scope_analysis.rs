@@ -12,7 +12,21 @@ use crate::eval47::data_map::{DataCollection, GValue};
 use crate::eval47::util::{bitcast_usize_i64, clone_signature, MantisGod};
 use crate::value::Value;
 
-pub const BUILTIN_OPS: &'static [&'static str] = &["=", "+", "-", "*", "/", "%"];
+pub const BUILTIN_OPS: &'static [&'static str] = &[
+    "=",
+    "+",
+    "-",
+    "*",
+    "/",
+    "%",
+    "unimplemented",
+    "vector",
+    "vector-length",
+    "vector-ref",
+    "vector-set!",
+    "vector-push!",
+    "unused"
+];
 
 pub struct AnalyseContext {
     tyck_info_pool: TyckInfoPool,
@@ -39,7 +53,7 @@ impl AnalyseContext {
         self.async_ffi_functions.insert(name.into(), (ffi, signature));
     }
 
-    pub fn min_scope_analyse(&mut self, ast: &[TopLevel]) -> AnalyseResult {
+    pub fn min_scope_analyse(&self, ast: &[TopLevel]) -> AnalyseResult {
         let mut result = AnalyseResult::new();
         let mut scope_chain = Some(Box::new(Scope::new(None)));
 
@@ -51,7 +65,7 @@ impl AnalyseContext {
 
 impl AnalyseContext {
     fn analyze_global(
-        &mut self,
+        &self,
         result: &mut AnalyseResult,
         scope_chain: &mut Option<Box<Scope>>,
         globals: &[TopLevel]
@@ -64,6 +78,11 @@ impl AnalyseContext {
                         .expect("Why the function name is empty anyway?")
                         .0
                         .as_str()
+                );
+                result.data_collection.insert(
+                    func_handle.as_ref(),
+                    "FunctionName",
+                    func_handle.name.as_ref().unwrap().0.as_str(),
                 );
                 result.data_collection.insert(
                     func_handle.as_ref(),
@@ -85,7 +104,7 @@ impl AnalyseContext {
     }
 
     fn analyze_function(
-        &mut self,
+        &self,
         result: &mut AnalyseResult,
         scope_chain: &mut Option<Box<Scope>>,
         func: Handle<Function>
@@ -112,7 +131,7 @@ impl AnalyseContext {
     }
 
     fn analyze_stmt(
-        &mut self,
+        &self,
         result: &mut AnalyseResult,
         scope_chain: &mut Option<Box<Scope>>,
         stmt: &TopLevel
@@ -128,6 +147,11 @@ impl AnalyseContext {
                     "VarID",
                     bitcast_usize_i64(var_id)
                 );
+                result.data_collection.insert(
+                    stmt,
+                    "VarName",
+                    var_name.0.as_str()
+                );
                 self.analyze_expr(result, scope_chain, expr);
             }
             TopLevel::Expr(expr) => self.analyze_expr(result, scope_chain, expr)
@@ -135,7 +159,7 @@ impl AnalyseContext {
     }
 
     fn analyze_expr(
-        &mut self,
+        &self,
         result: &mut AnalyseResult,
         scope_chain: &mut Option<Box<Scope>>,
         expr: &Expr
@@ -143,7 +167,15 @@ impl AnalyseContext {
         match expr {
             Expr::Value(value) => self.analyze_value(result, scope_chain, value),
             Expr::Variable(var) => self.analyze_variable(result, scope_chain, var.clone()),
-            Expr::Lambda(func) => self.analyze_function(result, scope_chain, func.clone()),
+            Expr::Lambda(func) => {
+                self.analyze_function(result, scope_chain, func.clone());
+                let func_id = scope_chain.as_mut().unwrap().allocate_func();
+                result.data_collection.insert(
+                    func.clone().as_ref(),
+                    "FunctionID",
+                    bitcast_usize_i64(func_id)
+                );
+            },
             Expr::Let(let_item) => self.analyze_let(result, scope_chain, let_item.clone()),
             Expr::Set(set_item) => self.analyze_set(result, scope_chain, set_item.clone()),
             Expr::Cond(cond) => self.analyze_cond(result, scope_chain, cond.clone()),
@@ -152,7 +184,7 @@ impl AnalyseContext {
     }
 
     fn analyze_value(
-        &mut self,
+        &self,
         result: &mut AnalyseResult,
         scope_chain: &mut Option<Box<Scope>>,
         value: &Value
@@ -166,6 +198,11 @@ impl AnalyseContext {
                     value,
                     "ConstID",
                     bitcast_usize_i64(const_id)
+                );
+                result.data_collection.insert(
+                    value,
+                    "ConstValue",
+                    s.as_str()
                 );
             },
             Value::Sym(_) => panic!("Sym value is not supported by Pr47"),
@@ -181,7 +218,7 @@ impl AnalyseContext {
     }
 
     fn analyze_variable(
-        &mut self,
+        &self,
         result: &mut AnalyseResult,
         scope_chain: &mut Option<Box<Scope>>,
         var: Handle<Symbol>
@@ -202,6 +239,11 @@ impl AnalyseContext {
 
         let (_, _, result) = lookup_context;
 
+        result.data_collection.insert(
+            var.as_ref(),
+            "VarName",
+            var.0.as_str()
+        );
         match lookup_result {
             MantisGod::Left((is_capture, var_id)) => {
                 result.data_collection.insert(
@@ -230,12 +272,16 @@ impl AnalyseContext {
     }
 
     fn analyze_let(
-        &mut self,
+        &self,
         result: &mut AnalyseResult,
         scope_chain: &mut Option<Box<Scope>>,
         let_item: Handle<Let>
     ) {
         for bind in let_item.binds.iter() {
+            if BUILTIN_OPS.contains(&bind.0.0.as_str()) {
+                panic!("should not re-define builtin op");
+            }
+
             self.analyze_expr(result, scope_chain, &bind.1);
             let var_id = scope_chain.as_mut().unwrap().add_var(bind.0.0.as_ref());
             result.data_collection.insert(
@@ -243,17 +289,26 @@ impl AnalyseContext {
                 "VarID",
                  bitcast_usize_i64(var_id)
             );
+            result.data_collection.insert(
+                let_item.as_ref(),
+                "VarName",
+                bind.0.0.as_str()
+            );
         }
 
         self.analyze_stmt_list(result, scope_chain, &let_item.body);
     }
 
     fn analyze_set(
-        &mut self,
+        &self,
         result: &mut AnalyseResult,
         scope_chain: &mut Option<Box<Scope>>,
         set: Handle<Set>
     ) {
+        if BUILTIN_OPS.contains(&set.name.0.as_str()) {
+            panic!("should not re-define builtin op");
+        }
+
         self.analyze_expr(result, scope_chain, &set.value);
 
         let mut lookup_context = (
@@ -274,7 +329,7 @@ impl AnalyseContext {
     }
 
     fn analyze_cond(
-        &mut self,
+        &self,
         result: &mut AnalyseResult,
         scope_chain: &mut Option<Box<Scope>>,
         cond: Handle<Cond>
@@ -290,7 +345,7 @@ impl AnalyseContext {
     }
 
     fn analyze_call(
-        &mut self,
+        &self,
         result: &mut AnalyseResult,
         scope_chain: &mut Option<Box<Scope>>,
         call: Handle<Call>
@@ -301,7 +356,7 @@ impl AnalyseContext {
     }
 
     fn analyze_stmt_list(
-        &mut self,
+        &self,
         result: &mut AnalyseResult,
         scope_chain: &mut Option<Box<Scope>>,
         stmts: &[TopLevel]
@@ -321,6 +376,15 @@ impl AnalyseContext {
                     func_handle.as_ref(),
                     "FunctionID",
                     bitcast_usize_i64(func_id)
+                );
+                result.data_collection.insert(
+                    func_handle.as_ref(),
+                    "FunctionName",
+                    func_handle.name
+                        .as_ref()
+                        .expect("Why the function name is empty anyway?")
+                        .0
+                        .as_str()
                 );
             }
         }

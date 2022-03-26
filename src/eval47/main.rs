@@ -26,7 +26,8 @@ fn main() {
     }
 
     eprintln!("Performing analyse");
-    let mut context = AnalyseContext::new();
+    let context = AnalyseContext::new();
     let analyse_result = context.min_scope_analyse(&top_levels);
-    eprintln!("{:#?}", analyse_result.data_collection);
+    let result = serde_json::to_string_pretty(&analyse_result.data_collection).unwrap();
+    eprintln!("{}", result);
 }

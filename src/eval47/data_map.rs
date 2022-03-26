@@ -1,10 +1,11 @@
+use serde::Serialize;
 use std::collections::HashMap;
 use xjbutil::value::Value;
 
 pub type GValue = Value;
 pub type DataMap = HashMap<String, GValue>;
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct DataCollection(HashMap<usize, DataMap>);
 
 impl DataCollection {

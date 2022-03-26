@@ -23,7 +23,9 @@ name = "free_variables"
 path = "examples/free_variables.rs"
 
 [dependencies]
-lazy_static = "^1.4.*"
+lazy_static = "1.4"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
 sexpr_ir = { git="https://github.com/imlyzh/sexpr_ir" }
 pr47 = { git="https://github.com/Pr47/Pr47", default-features=false, features=[
     "al31f",
