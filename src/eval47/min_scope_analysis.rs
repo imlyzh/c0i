@@ -123,9 +123,7 @@ impl AnalyseContext {
 
         result.data_collection.insert(func.as_ref(), "ParamVarIDs", var_ids);
 
-        for stmt in func.body.iter() {
-            self.analyze_stmt(result, scope_chain, stmt);
-        }
+        self.analyze_stmt_list(result, scope_chain, &func.body);
 
         *scope_chain = scope_chain.take().unwrap().parent;
     }
@@ -531,6 +529,7 @@ impl Scope {
                         );
 
                         self.variables.insert(name.to_string(), (true, capture_id));
+                        return Some(LookupResult::Left((true, capture_id)));
                     }
                 }
             }
