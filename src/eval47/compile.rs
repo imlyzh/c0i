@@ -1,19 +1,24 @@
 use std::collections::HashMap;
 use std::convert::TryInto;
-use pr47::data::tyck::TyckInfoPool;
+use std::ptr::NonNull;
+use pr47::data::generic::GenericTypeVT;
+use pr47::data::tyck::{TyckInfo, TyckInfoPool};
 use pr47::vm::al31f::insc::Insc;
 use sexpr_ir::gast::Handle;
+use sexpr_ir::gast::symbol::Symbol;
 use xjbutil::boxed_slice;
+use xjbutil::korobka::Korobka;
 use xjbutil::slice_arena::SliceArena;
 use crate::ast::{Expr, Function, TopLevel};
 use crate::eval47::commons::{CompiledFunction, CompiledProgram, FFIAsyncFunction, FFIFunction};
 use crate::eval47::data_map::GValue;
 use crate::eval47::min_scope_analysis::AnalyseResult;
-use crate::eval47::util::{bitcast_i64_usize, Mantis};
+use crate::eval47::util::{bitcast_i64_usize, MantisGod};
 use crate::value::Value;
 
 pub struct CompileContext {
     tyck_info_pool: TyckInfoPool,
+    vt_pool: Vec<Korobka<GenericTypeVT>>,
     slice_arena: SliceArena<8192, 8>,
     code: Vec<Insc>,
     const_pool: Vec<pr47::data::Value>,
@@ -33,6 +38,7 @@ impl CompileContext {
     ) -> CompileContext {
         let context = CompileContext {
             tyck_info_pool: TyckInfoPool::new(),
+            vt_pool: Vec::new(),
             slice_arena: SliceArena::new(),
             code: Vec::new(),
             const_pool: Vec::new(),
@@ -189,7 +195,7 @@ impl CompileContext {
     ) -> usize {
         match expr {
             Expr::Value(value) => self.compile_value(value, analyse_result, tgt),
-            Expr::Variable(var) => self.compile_var(var, analyse_result, tgt),
+            Expr::Variable(var) => self.compile_var(var.clone(), analyse_result, tgt),
             Expr::Lambda(lambda) => self.compile_lambda(lambda, analyse_result, tgt),
             Expr::Let(let_item) => self.compile_let(let_item, analyse_result, tgt),
             Expr::Set(set) => self.compile_set(set, analyse_result, tgt),
@@ -202,7 +208,7 @@ impl CompileContext {
         &mut self,
         _expr: &Expr,
         _analyse_result: &AnalyseResult
-    ) -> Mantis<usize, usize> {
+    ) -> MantisGod<usize, usize, usize> {
         todo!()
     }
 
@@ -255,6 +261,94 @@ impl CompileContext {
         tgt
     }
 
+    fn compile_var(
+        &mut self,
+        var: Handle<Symbol>,
+        analyse_result: &AnalyseResult,
+        tgt: Option<usize>
+    ) -> usize {
+        let var_ref: Vec<GValue> = analyse_result.data_collection.get(var.as_ref(), "Ref")
+            .unwrap()
+            .clone()
+            .try_into()
+            .unwrap();
+        match <GValue as TryInto<String>>::try_into(var_ref[0].clone()).unwrap().as_str() {
+            "Variable" => {
+                let var_id = var_ref[1].clone().try_into().unwrap();
+                let mut var_id = bitcast_i64_usize(var_id);
+                let is_capture: bool = var_ref[2].clone().try_into().unwrap();
+
+                if is_capture {
+                    var_id = self.compiling_function_chain.last().unwrap()
+                        .translate_local_id_to_address(var_id);
+                }
+
+                if let Some(tgt) = tgt {
+                    self.code.push(Insc::Move(var_id, tgt));
+                    tgt
+                } else {
+                    var_id
+                }
+            },
+            "Function" => {
+                let func_id = var_ref[1].clone().try_into().unwrap();
+                let func_id = bitcast_i64_usize(func_id);
+                let params: Vec<GValue> = analyse_result.functions
+                    .get_raw_key(func_id, "ParamVarIDs")
+                    .unwrap()
+                    .clone()
+                    .try_into()
+                    .unwrap();
+                let captures: Vec<GValue> = analyse_result.functions
+                    .get_raw_key(func_id, "Captures")
+                    .unwrap()
+                    .clone()
+                    .try_into()
+                    .unwrap();
+                let captures: Vec<_> = captures.into_iter()
+                    .map(|item: GValue| {
+                        let item: Vec<GValue> = item.try_into().unwrap();
+                        (
+                            item[0].clone().try_into().unwrap(),
+                            bitcast_i64_usize(item[1].clone().try_into().unwrap())
+                        )
+                    })
+                    .collect();
+
+                let mut captured_item_address = Vec::new();
+                for (is_another_capture, item_id) in captures {
+                    let item_id = if is_another_capture {
+                        item_id
+                    } else {
+                        self.compiling_function_chain.last().unwrap()
+                            .translate_local_id_to_address(item_id)
+                    };
+                    captured_item_address.push(item_id);
+                }
+                let captured_item_address = unsafe {
+                    self.slice_arena.unsafe_make(&captured_item_address)
+                };
+
+                let tgt = if let Some(tgt) = tgt {
+                    tgt
+                } else {
+                    self.compiling_function_chain.last_mut().unwrap().allocate_temp()
+                };
+
+                let vt = self.create_closure_vt(params.len());
+                let vt_ptr = vt.as_nonnull();
+                self.vt_pool.push(vt);
+
+                self.code.push(Insc::CreateClosure(func_id, captured_item_address, vt_ptr, tgt));
+                tgt
+            },
+            "FFI" => {
+                panic!("FFI functions are not first-class!")
+            },
+            _ => unreachable!()
+        }
+    }
+
     fn display_compiling_function(&self) {
         for _ in 0..self.compiling_function_names.len() {
             eprint!("..");
@@ -267,5 +361,18 @@ impl CompileContext {
             }
         }
         eprintln!();
+    }
+}
+
+impl CompileContext {
+    fn create_closure_vt(&mut self, closure_arg_count: usize) -> Korobka<GenericTypeVT> {
+        let closure_arg_types: Vec<NonNull<TyckInfo>> = (0..closure_arg_count).into_iter()
+            .map(|_| self.tyck_info_pool.get_any_type())
+            .collect();
+
+        Korobka::new(pr47::builtins::closure::create_closure_vt(
+            &mut self.tyck_info_pool,
+            &closure_arg_types
+        ))
     }
 }

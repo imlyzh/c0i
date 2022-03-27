@@ -38,6 +38,7 @@ xjbutil = { git="https://github.com/Pr47/xjbutil", default-features=false, featu
     "slice-arena",
     "either",
     "makro",
+    "korobka",
     "value",
     "value-serde"
 ] }
