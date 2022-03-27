@@ -9,6 +9,7 @@ use sexpr_ir::syntax::sexpr::parse;
 use xjbutil::std_ext::ResultExt;
 use xjbutil::unchecked::UncheckedSendSync;
 use c0ilib::ast::TopLevel;
+use c0ilib::eval47::builtins::DBG_INT_BIND;
 use c0ilib::eval47::commons::CompiledProgram;
 use c0ilib::eval47::compile::CompileContext;
 use c0ilib::eval47::min_scope_analysis::AnalyseContext;
@@ -54,15 +55,17 @@ fn main() {
             continue;
         }
 
-        eprintln!("Transforming source file {}", arg);
-        let file = file_parse(arg.as_str()).unwrap();
+        eprintln!("Transforming source file `{}`", arg);
+        let file = file_parse(arg.as_str()).expect("Failed parsing file to SExpr");
         for piece in file {
-            top_levels.push(TopLevel::from_sexpr(&piece).unwrap())
+            top_levels.push(TopLevel::from_sexpr(&piece)
+                .expect("Failed transforming SExpr to TopLevel AST"));
         }
     }
 
     eprintln!("Performing analyse");
-    let context = AnalyseContext::new();
+    let mut context = AnalyseContext::new();
+    context.register_ffi("dbg-int", &DBG_INT_BIND);
     let analyse_result = context.min_scope_analyse(&top_levels);
 
     if args.contains(&"--only-analyse".to_string()) {

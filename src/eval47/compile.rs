@@ -193,6 +193,7 @@ impl CompileContext {
         }
 
         let compiling_function = self.compiling_function_chain.pop().unwrap();
+        self.compiling_function_names.pop().unwrap();
         self.functions.insert(func_id, CompiledFunction {
             start_addr,
             arg_count: param_var_ids.len(),
@@ -551,12 +552,23 @@ impl CompileContext {
         let tgt = if let Some(tgt) = tgt { tgt } else {
             self.compiling_function_chain.last_mut().unwrap().allocate_temp()
         };
-
-        let called_func = self.compile_expr_for_fn_call(&call.0[0], analyse_result);
         let mut args = Vec::new();
         for arg in call.as_ref().0.iter().skip(1) {
             args.push(self.compile_expr(arg, analyse_result, None));
         }
+
+        if let Expr::Variable(sym) = &call.0[0] {
+            match sym.0.as_str() {
+                "=" => {
+                    assert_eq!(args.len(), 2);
+                    self.code.push(Insc::EqAny(args[0], args[1], tgt));
+                    return tgt;
+                },
+                _ => {}
+            }
+        }
+
+        let called_func = self.compile_expr_for_fn_call(&call.0[0], analyse_result);
 
         match called_func {
             MantisGod::Left(var_id) => {
@@ -593,14 +605,24 @@ impl CompileContext {
                 }));
             },
             MantisGod::Right((is_async, ffi_func_id)) => {
-                let arg_count = if is_async {
+                let (arg_count, signature) = if is_async {
                     let signature = self.ffi_funcs[ffi_func_id].signature(&mut self.tyck_info_pool);
-                    signature.param_options.len()
+                    (signature.param_options.len(), signature)
                 } else {
                     let signature = self.async_ffi_funcs[ffi_func_id]
                         .signature(&mut self.tyck_info_pool);
-                    signature.param_options.len()
+                    (signature.param_options.len(), signature)
                 };
+
+                for i in 0..arg_count {
+                    self.code.push(Insc::TypeCheck(args[i], unsafe {
+                        if let TyckInfo::Function(func) = signature.func_type.as_ref() {
+                            func.params.as_ref()[i].clone()
+                        } else {
+                            unreachable!()
+                        }
+                    }));
+                }
 
                 assert_eq!(arg_count, call.0.len() - 1);
                 if is_async {
