@@ -126,11 +126,6 @@ struct CompilingFunction {
 
 impl CompilingFunction {
     fn allocate_temp(&mut self) -> usize {
-        eprintln!(
-            "allocating one more temp on frame {:x?}, now we have {} local vars",
-            self as *mut _,
-            self.local_count + 1
-        );
         let ret = self.local_count;
         self.local_count += 1;
         ret
@@ -177,7 +172,6 @@ impl CompileContext {
         let base_frame_size = bitcast_i64_usize(base_frame_size);
 
         self.compiling_function_names.push(func_name);
-        self.display_compiling_function(false);
 
         let start_addr = self.code.len();
         let compiling_function = CompilingFunction {
@@ -199,7 +193,6 @@ impl CompileContext {
         }
 
         let compiling_function = self.compiling_function_chain.pop().unwrap();
-        self.display_compiling_function(true);
         self.compiling_function_names.pop().unwrap();
         self.functions.insert(func_id, CompiledFunction {
             start_addr,
@@ -590,7 +583,7 @@ impl CompileContext {
 
         match called_func {
             MantisGod::Left(var_id) => {
-                let closure_tyck_info = unsafe {
+                let _closure_tyck_info = unsafe {
                     let closure_vt = self.create_closure_vt(call.0.len() - 1);
                     self.tyck_info_pool.create_container_type(
                         TypeId::of::<Closure>(),
@@ -626,7 +619,7 @@ impl CompileContext {
                 }));
             },
             MantisGod::Right((is_async, ffi_func_id)) => {
-                let (arg_count, signature) = if !is_async {
+                let (arg_count, _signature) = if !is_async {
                     let signature = self.ffi_funcs[ffi_func_id]
                         .signature(&mut self.tyck_info_pool);
                     (signature.param_options.len(), signature)
@@ -671,25 +664,6 @@ impl CompileContext {
         }
 
         tgt
-    }
-
-    fn display_compiling_function(&self, is_quitting: bool) {
-        for _ in 0..self.compiling_function_names.len() {
-            eprint!("..");
-        }
-        eprint!(" ");
-        if is_quitting {
-            eprintln!("quitting from last frame");
-            return;
-        }
-
-        for i in 0..self.compiling_function_names.len() {
-            eprint!("{}", self.compiling_function_names[i]);
-            if i != self.compiling_function_names.len() - 1 {
-                eprint!("::");
-            }
-        }
-        eprintln!();
     }
 }
 

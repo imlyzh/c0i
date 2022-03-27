@@ -1,10 +1,10 @@
 use std::convert::TryInto;
 use std::env;
+use std::fs::read_to_string;
 use std::sync::Arc;
 use pr47::data::exception::Exception;
 use pr47::vm::al31f::alloc::default_alloc::DefaultAlloc;
 use pr47::vm::al31f::executor::{create_vm_main_thread, vm_thread_run_function, VMThread};
-use sexpr_ir::syntax::mexpr::file_parse;
 use sexpr_ir::syntax::sexpr::parse;
 use xjbutil::std_ext::ResultExt;
 use xjbutil::unchecked::UncheckedSendSync;
@@ -34,7 +34,8 @@ async fn run_program(
         ).unwrap_no_debug().await.into_inner()
     };
     let end_time = std::time::Instant::now();
-    eprintln!("elapsed time = {}", (end_time - start_time).as_millis());
+    eprintln!("Program terminated, elapsed time = {}",
+              (end_time - start_time).as_millis());
 
     result.unwrap_no_debug();
 }
@@ -54,10 +55,13 @@ fn main() {
         }
 
         eprintln!("Transforming source file `{}`", arg);
-        let file = file_parse(arg.as_str()).expect("Failed parsing file to SExpr");
-        for piece in file {
-            top_levels.push(TopLevel::from_sexpr(&piece)
-                .expect("Failed transforming SExpr to TopLevel AST"));
+        let file_content = read_to_string(arg).unwrap();
+        let sexprs = parse(&file_content, Arc::new(arg.to_string())).unwrap();
+        for piece in sexprs {
+            top_levels.push(
+                TopLevel::from_sexpr(&piece)
+                    .expect("Failed transforming SExpr to TopLevel AST")
+            );
         }
     }
 
@@ -96,11 +100,13 @@ fn main() {
     );
     let result = compile_context.compile(&top_levels, &analyse_result);
 
+    eprintln!("\nCompiled bytecode: ");
     unsafe {
         for (idx, insc) in result.cp.code.iter().enumerate() {
             eprintln!(" {}) {}", idx, insc.unsafe_to_string());
         }
     }
+    eprintln!("\nStarting program\n");
 
     let application_start =
         analyse_result.global_data_map.get("ApplicationStartFuncID")
