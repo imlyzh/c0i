@@ -124,6 +124,11 @@ impl AnalyseContext {
                     "BuiltinConsFuncID".into(),
                     GValue::Int(bitcast_usize_i64(func_id)),
                 );
+            } else if name.as_ref().0.as_str() == "application-start" {
+                result.global_data_map.insert(
+                    "ApplicationStartFuncID".into(),
+                    GValue::Int(bitcast_usize_i64(func_id)),
+                );
             }
         }
 

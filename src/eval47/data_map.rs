@@ -22,9 +22,6 @@ impl DataCollection {
         let key = key.into();
         let value = value.into();
 
-        #[cfg(any(debug_assertions, test))]
-        eprintln!("INSERT: key0 = {:x?}, key1 = `{}`, value = {:?}", ptr as *const _, key, value);
-
         self.0.entry(ptr as *const _ as usize)
             .or_insert_with(DataMap::new)
             .insert(key, value);
@@ -39,9 +36,6 @@ impl DataCollection {
         let key1 = key1.into();
         let value = value.into();
 
-        #[cfg(any(debug_assertions, test))]
-        eprintln!("INSERT: key0 = {:?}, key1 = `{}`, value = {:?}", key0, key1, value);
-
         self.0.entry(key0)
             .or_insert_with(DataMap::new)
             .insert(key1, value);
@@ -54,9 +48,6 @@ impl DataCollection {
     ) -> Option<&GValue> {
         let key = key.into();
 
-        #[cfg(any(debug_assertions, test))]
-        eprintln!("GET: key0 = {:x?}, key1 = `{}`", ptr as *const _, key);
-
         self.0.get(&(ptr as *const _ as usize))
             .and_then(|map| map.get(&key))
     }
@@ -67,9 +58,6 @@ impl DataCollection {
         key1: impl Into<String>
     ) -> Option<&GValue> {
         let key1 = key1.into();
-
-        #[cfg(any(debug_assertions, test))]
-        eprintln!("GET: key0 = {:?}, key1 = `{}`", key0, key1);
 
         self.0.get(&key0)
             .and_then(|map| map.get(&key1))
@@ -82,9 +70,6 @@ impl DataCollection {
     ) -> Option<&mut GValue> {
         let key = key.into();
 
-        #[cfg(any(debug_assertions, test))]
-        eprintln!("GET: key0 = {:x?}, key1 = `{}`", ptr as *const _, key);
-
         self.0.get_mut(&(ptr as *const _ as usize))
             .and_then(|map| map.get_mut(&key))
     }
@@ -95,9 +80,6 @@ impl DataCollection {
         key1: impl Into<String>
     ) -> Option<&mut GValue> {
         let key1 = key1.into();
-
-        #[cfg(any(debug_assertions, test))]
-        eprintln!("GET: key0 = {:?}, key1 = `{}`", key0, key1);
 
         self.0.get_mut(&key0)
             .and_then(|map| map.get_mut(&key1))

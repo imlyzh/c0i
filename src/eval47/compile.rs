@@ -33,6 +33,20 @@ pub struct CompileContext {
     compiling_function_names: Vec<String>
 }
 
+pub struct CompileResult {
+    pub cp: CompiledProgram,
+    #[allow(dead_code)]
+    tyck_info_pool: TyckInfoPool,
+    #[allow(dead_code)]
+    vt_pool: Vec<Korobka<GenericTypeVT>>
+}
+
+impl CompileResult {
+    pub fn program(&self) -> &CompiledProgram {
+        &self.cp
+    }
+}
+
 impl CompileContext {
     pub fn new(
         ffi_funcs: &[FFIFunction],
@@ -65,18 +79,38 @@ impl CompileContext {
         mut self,
         ast: &[TopLevel],
         analyse_result: &AnalyseResult
-    ) -> CompiledProgram {
+    ) -> CompileResult {
+        eprintln!("Compiling to bytecode");
+
         for piece in ast {
             self.compile_top_level(piece, analyse_result);
         }
 
-        todo!()
+        let mut functions = self.functions.into_iter().collect::<Vec<_>>();
+        functions.sort_by_key(|x| x.0);
+        let functions = functions.into_iter().map(|x| x.1).collect::<Vec<_>>().into_boxed_slice();
+
+        CompileResult {
+            cp: CompiledProgram {
+                slice_arena: self.slice_arena,
+                code: self.code.into_boxed_slice(),
+                const_pool: self.const_pool.into_boxed_slice(),
+                init_proc: self.init_proc,
+                functions,
+                ffi_funcs: self.ffi_funcs,
+                async_ffi_funcs: self.async_ffi_funcs
+            },
+            tyck_info_pool: self.tyck_info_pool,
+            vt_pool: self.vt_pool
+        }
     }
 }
 
 struct CompilingFunction {
+    #[allow(dead_code)]
     start_addr: usize,
     capture_count: usize,
+    #[allow(dead_code)]
     arg_count: usize,
     local_count: usize
 }
@@ -228,10 +262,10 @@ impl CompileContext {
         &mut self,
         expr: &Expr,
         analyse_result: &AnalyseResult
-    ) -> MantisGod<(bool, usize), usize, (bool, usize)> {
+    ) -> MantisGod<usize, usize, (bool, usize)> {
         match expr {
             Expr::Variable(var) => self.compile_var_for_fn_call(var.clone(), analyse_result),
-            _ => MantisGod::Left((false, self.compile_expr(expr, analyse_result, None)))
+            _ => MantisGod::Left(self.compile_expr(expr, analyse_result, None))
         }
     }
 
@@ -297,9 +331,9 @@ impl CompileContext {
             .unwrap();
         match <GValue as TryInto<String>>::try_into(var_ref[0].clone()).unwrap().as_str() {
             "Variable" => {
-                let var_id = var_ref[1].clone().try_into().unwrap();
+                let is_capture: bool = var_ref[1].clone().try_into().unwrap();
+                let var_id = var_ref[2].clone().try_into().unwrap();
                 let mut var_id = bitcast_i64_usize(var_id);
-                let is_capture: bool = var_ref[2].clone().try_into().unwrap();
 
                 if is_capture {
                     var_id = self.compiling_function_chain.last().unwrap()
@@ -337,7 +371,7 @@ impl CompileContext {
         &mut self,
         var: Handle<Symbol>,
         analyse_result: &AnalyseResult,
-    ) -> MantisGod<(bool, usize), usize, (bool, usize)> {
+    ) -> MantisGod<usize, usize, (bool, usize)> {
         let var_ref: Vec<GValue> = analyse_result.data_collection.get(var.as_ref(), "Ref")
             .unwrap()
             .clone()
@@ -345,10 +379,15 @@ impl CompileContext {
             .unwrap();
         match <GValue as TryInto<String>>::try_into(var_ref[0].clone()).unwrap().as_str() {
             "Variable" => {
-                let var_id = var_ref[1].clone().try_into().unwrap();
+                let is_capture: bool = var_ref[1].clone().try_into().unwrap();
+                let var_id = var_ref[2].clone().try_into().unwrap();
                 let var_id = bitcast_i64_usize(var_id);
-                let is_capture: bool = var_ref[2].clone().try_into().unwrap();
-                MantisGod::Left((is_capture, var_id))
+                MantisGod::Left(if is_capture {
+                    var_id
+                } else {
+                    self.compiling_function_chain.last().unwrap()
+                        .translate_local_id_to_address(var_id)
+                })
             },
             "Function" => {
                 let func_id = var_ref[1].clone().try_into().unwrap();
@@ -401,6 +440,8 @@ impl CompileContext {
                 .try_into()
                 .unwrap();
             let var_id = bitcast_i64_usize(var_id);
+            let var_id = self.compiling_function_chain.last().unwrap()
+                .translate_local_id_to_address(var_id);
             self.compile_expr(&bind.1, analyse_result, Some(var_id));
         }
 
@@ -431,6 +472,8 @@ impl CompileContext {
             .try_into()
             .unwrap();
         let var_id = bitcast_i64_usize(var_id);
+        let var_id = self.compiling_function_chain.last().unwrap()
+            .translate_local_id_to_address(var_id);
         self.compile_expr(&set.value, analyse_result, Some(var_id));
 
         if let Some(tgt) = tgt {
@@ -516,15 +559,7 @@ impl CompileContext {
         }
 
         match called_func {
-            MantisGod::Left((is_capture, var_id)) => {
-                let var_address = if is_capture {
-                    var_id
-                } else {
-                    self.compiling_function_chain.last_mut()
-                        .unwrap()
-                        .translate_local_id_to_address(var_id)
-                };
-
+            MantisGod::Left(var_id) => {
                 let closure_tyck_info = unsafe {
                     let closure_vt = self.create_closure_vt(call.0.len() - 1);
                     self.tyck_info_pool.create_container_type(
@@ -537,8 +572,8 @@ impl CompileContext {
                 };
 
                 // TODO support va-args
-                self.code.push(Insc::TypeCheck(var_address, closure_tyck_info));
-                self.code.push(Insc::CallPtr(var_address, unsafe {
+                self.code.push(Insc::TypeCheck(var_id, closure_tyck_info));
+                self.code.push(Insc::CallPtr(var_id, unsafe {
                     self.slice_arena.unsafe_make(&args)
                 }, unsafe {
                     self.slice_arena.unsafe_make(&[tgt])
