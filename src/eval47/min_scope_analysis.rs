@@ -1,5 +1,6 @@
 use std::borrow::Borrow;
 use std::collections::HashMap;
+use std::convert::TryInto;
 use std::marker::PhantomData;
 
 use pr47::data::tyck::TyckInfoPool;
@@ -9,7 +10,7 @@ use sexpr_ir::gast::symbol::Symbol;
 use crate::ast::{Call, Cond, Expr, Function, Let, Set, TopLevel};
 use crate::eval47::commons::{FFIAsyncFunction, FFIFunction, Signature};
 use crate::eval47::data_map::{DataCollection, GValue};
-use crate::eval47::util::{bitcast_usize_i64, clone_signature, MantisGod};
+use crate::eval47::util::{bitcast_i64_usize, bitcast_usize_i64, clone_signature, MantisGod};
 use crate::value::Value;
 
 pub const BUILTIN_OPS: &'static [&'static str] = &[
@@ -57,14 +58,14 @@ impl AnalyseContext {
         let mut result = AnalyseResult::new();
         let mut scope_chain = Some(Box::new(Scope::new(None)));
 
-        self.analyze_global(&mut result, &mut scope_chain, ast);
+        self.analyse_global(&mut result, &mut scope_chain, ast);
 
         result
     }
 }
 
 impl AnalyseContext {
-    fn analyze_global(
+    fn analyse_global(
         &self,
         result: &mut AnalyseResult,
         scope_chain: &mut Option<Box<Scope>>,
@@ -109,6 +110,14 @@ impl AnalyseContext {
         scope_chain: &mut Option<Box<Scope>>,
         func: Handle<Function>
     ) {
+        let func_id: i64 = result.data_collection
+            .get(func.as_ref(), "FunctionID")
+            .unwrap()
+            .clone()
+            .try_into()
+            .unwrap();
+        let func_id = bitcast_i64_usize(func_id);
+
         *scope_chain = Some(Box::new(Scope::new_function_frame(scope_chain.take())));
 
         let mut var_ids = vec![];
@@ -121,9 +130,10 @@ impl AnalyseContext {
             var_ids.push(bitcast_usize_i64(var_id));
         }
 
-        result.data_collection.insert(func.as_ref(), "ParamVarIDs", var_ids);
+        result.data_collection.insert(func.as_ref(), "ParamVarIDs", var_ids.clone());
+        result.functions.insert_raw_key(func_id, "ParamVarIDs", var_ids);
 
-        self.analyze_stmt_list(result, scope_chain, &func.body);
+        self.analyse_stmt_list(result, scope_chain, &func.body);
         result.data_collection.insert(
             func.as_ref(),
             "Captures",
@@ -134,11 +144,21 @@ impl AnalyseContext {
             "BaseFrameSize",
             bitcast_usize_i64(scope_chain.as_ref().unwrap().base_frame_size())
         );
+        result.functions.insert_raw_key(
+            func_id,
+            "Captures",
+            scope_chain.as_ref().unwrap().func_captures()
+        );
+        result.functions.insert_raw_key(
+            func_id,
+            "BaseFrameSize",
+            bitcast_usize_i64(scope_chain.as_ref().unwrap().base_frame_size())
+        );
 
         *scope_chain = scope_chain.take().unwrap().parent;
     }
 
-    fn analyze_stmt(
+    fn analyse_stmt(
         &self,
         result: &mut AnalyseResult,
         scope_chain: &mut Option<Box<Scope>>,
@@ -160,21 +180,21 @@ impl AnalyseContext {
                     "VarName",
                     var_name.0.as_str()
                 );
-                self.analyze_expr(result, scope_chain, expr);
+                self.analyse_expr(result, scope_chain, expr);
             }
-            TopLevel::Expr(expr) => self.analyze_expr(result, scope_chain, expr)
+            TopLevel::Expr(expr) => self.analyse_expr(result, scope_chain, expr)
         }
     }
 
-    fn analyze_expr(
+    fn analyse_expr(
         &self,
         result: &mut AnalyseResult,
         scope_chain: &mut Option<Box<Scope>>,
         expr: &Expr
     ) {
         match expr {
-            Expr::Value(value) => self.analyze_value(result, scope_chain, value),
-            Expr::Variable(var) => self.analyze_variable(result, scope_chain, var.clone()),
+            Expr::Value(value) => self.analyse_value(result, scope_chain, value),
+            Expr::Variable(var) => self.analyse_variable(result, scope_chain, var.clone()),
             Expr::Lambda(func) => {
                 self.analyse_function(result, scope_chain, func.clone());
                 let func_id = scope_chain.as_mut().unwrap().allocate_func();
@@ -184,14 +204,14 @@ impl AnalyseContext {
                     bitcast_usize_i64(func_id)
                 );
             },
-            Expr::Let(let_item) => self.analyze_let(result, scope_chain, let_item.clone()),
-            Expr::Set(set_item) => self.analyze_set(result, scope_chain, set_item.clone()),
-            Expr::Cond(cond) => self.analyze_cond(result, scope_chain, cond.clone()),
-            Expr::FunctionCall(call) => self.analyze_call(result, scope_chain, call.clone())
+            Expr::Let(let_item) => self.analyse_let(result, scope_chain, let_item.clone()),
+            Expr::Set(set_item) => self.analyse_set(result, scope_chain, set_item.clone()),
+            Expr::Cond(cond) => self.analyse_cond(result, scope_chain, cond.clone()),
+            Expr::FunctionCall(call) => self.analyse_call(result, scope_chain, call.clone())
         }
     }
 
-    fn analyze_value(
+    fn analyse_value(
         &self,
         result: &mut AnalyseResult,
         scope_chain: &mut Option<Box<Scope>>,
@@ -215,8 +235,8 @@ impl AnalyseContext {
             },
             Value::Sym(_) => panic!("Sym value is not supported by Pr47"),
             Value::Pair(pair) => {
-                self.analyze_value(result, scope_chain, &pair.0);
-                self.analyze_value(result, scope_chain, &pair.1);
+                self.analyse_value(result, scope_chain, &pair.0);
+                self.analyse_value(result, scope_chain, &pair.1);
             },
             Value::Dict(_) => panic!("Not supported yet"),
             Value::Vec(_) => panic!("Not supported yet"),
@@ -225,7 +245,7 @@ impl AnalyseContext {
         }
     }
 
-    fn analyze_variable(
+    fn analyse_variable(
         &self,
         result: &mut AnalyseResult,
         scope_chain: &mut Option<Box<Scope>>,
@@ -279,7 +299,7 @@ impl AnalyseContext {
         }
     }
 
-    fn analyze_let(
+    fn analyse_let(
         &self,
         result: &mut AnalyseResult,
         scope_chain: &mut Option<Box<Scope>>,
@@ -290,7 +310,7 @@ impl AnalyseContext {
                 panic!("should not re-define builtin op");
             }
 
-            self.analyze_expr(result, scope_chain, &bind.1);
+            self.analyse_expr(result, scope_chain, &bind.1);
             let var_id = scope_chain.as_mut().unwrap().add_var(bind.0.0.as_ref());
             result.data_collection.insert(
                 let_item.as_ref(),
@@ -304,10 +324,10 @@ impl AnalyseContext {
             );
         }
 
-        self.analyze_stmt_list(result, scope_chain, &let_item.body);
+        self.analyse_stmt_list(result, scope_chain, &let_item.body);
     }
 
-    fn analyze_set(
+    fn analyse_set(
         &self,
         result: &mut AnalyseResult,
         scope_chain: &mut Option<Box<Scope>>,
@@ -317,7 +337,7 @@ impl AnalyseContext {
             panic!("should not re-define builtin op");
         }
 
-        self.analyze_expr(result, scope_chain, &set.value);
+        self.analyse_expr(result, scope_chain, &set.value);
 
         let mut lookup_context = (
             &self.ffi_functions,
@@ -336,34 +356,34 @@ impl AnalyseContext {
         }
     }
 
-    fn analyze_cond(
+    fn analyse_cond(
         &self,
         result: &mut AnalyseResult,
         scope_chain: &mut Option<Box<Scope>>,
         cond: Handle<Cond>
     ) {
         for pair in cond.pairs.iter() {
-            self.analyze_expr(result, scope_chain, &pair.0);
-            self.analyze_expr(result, scope_chain, &pair.1);
+            self.analyse_expr(result, scope_chain, &pair.0);
+            self.analyse_expr(result, scope_chain, &pair.1);
         }
 
         if let Some(other) = cond.other.as_ref() {
-            self.analyze_expr(result, scope_chain, other);
+            self.analyse_expr(result, scope_chain, other);
         }
     }
 
-    fn analyze_call(
+    fn analyse_call(
         &self,
         result: &mut AnalyseResult,
         scope_chain: &mut Option<Box<Scope>>,
         call: Handle<Call>
     ) {
         for arg in call.0.iter() {
-            self.analyze_expr(result, scope_chain, arg);
+            self.analyse_expr(result, scope_chain, arg);
         }
     }
 
-    fn analyze_stmt_list(
+    fn analyse_stmt_list(
         &self,
         result: &mut AnalyseResult,
         scope_chain: &mut Option<Box<Scope>>,
@@ -398,7 +418,7 @@ impl AnalyseContext {
         }
 
         for stmt in stmts {
-            self.analyze_stmt(result, scope_chain, stmt);
+            self.analyse_stmt(result, scope_chain, stmt);
         }
 
         *scope_chain = scope_chain.take().unwrap().parent;
@@ -408,6 +428,7 @@ impl AnalyseContext {
 pub struct AnalyseResult<'a> {
     pub data_collection: DataCollection,
     pub global_data_map: HashMap<String, GValue>,
+    pub functions: DataCollection,
     pub global_consts: Vec<GValue>,
     pub ffi_function_in_use: HashMap<String, (FFIFunction, Signature, usize)>,
     pub async_ffi_function_in_use: HashMap<String, (FFIAsyncFunction, Signature, usize)>,
@@ -419,6 +440,7 @@ impl<'a> AnalyseResult<'a> {
         Self {
             data_collection: DataCollection::new(),
             global_data_map: HashMap::new(),
+            functions: DataCollection::new(),
             global_consts: Vec::new(),
             ffi_function_in_use: HashMap::new(),
             async_ffi_function_in_use: HashMap::new(),

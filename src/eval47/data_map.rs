@@ -24,6 +24,17 @@ impl DataCollection {
             .insert(key.into(), value.into());
     }
 
+    pub fn insert_raw_key(
+        &mut self,
+        key0: usize,
+        key1: impl Into<String>,
+        value: impl Into<GValue>
+    ) {
+        self.0.entry(key0)
+            .or_insert_with(DataMap::new)
+            .insert(key1.into(), value.into());
+    }
+
     pub fn get<T>(
         &self,
         ptr: &T,
@@ -33,6 +44,15 @@ impl DataCollection {
             .and_then(|map| map.get(&key.into()))
     }
 
+    pub fn get_raw_key(
+        &self,
+        key0: usize,
+        key1: impl Into<String>
+    ) -> Option<&GValue> {
+        self.0.get(&key0)
+            .and_then(|map| map.get(&key1.into()))
+    }
+
     pub fn get_mut<T>(
         &mut self,
         ptr: &T,
@@ -40,5 +60,14 @@ impl DataCollection {
     ) -> Option<&mut GValue> {
         self.0.get_mut(&(ptr as *const _ as usize))
             .and_then(|map| map.get_mut(&key.into()))
+    }
+
+    pub fn get_mut_raw_key(
+        &mut self,
+        key0: usize,
+        key1: impl Into<String>
+    ) -> Option<&mut GValue> {
+        self.0.get_mut(&key0)
+            .and_then(|map| map.get_mut(&key1.into()))
     }
 }
