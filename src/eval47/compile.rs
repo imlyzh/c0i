@@ -343,7 +343,7 @@ impl CompileContext {
                 let var_id = var_ref[2].clone().try_into().unwrap();
                 let mut var_id = bitcast_i64_usize(var_id);
 
-                if is_capture {
+                if !is_capture {
                     var_id = self.compiling_function_chain.last().unwrap()
                         .translate_local_id_to_address(var_id);
                 }
@@ -592,7 +592,7 @@ impl CompileContext {
                 };
 
                 // TODO support va-args
-                self.code.push(Insc::TypeCheck(var_id, closure_tyck_info));
+                // self.code.push(Insc::TypeCheck(var_id, closure_tyck_info));
                 self.code.push(Insc::CallPtr(var_id, unsafe {
                     self.slice_arena.unsafe_make(&args)
                 }, unsafe {
@@ -623,7 +623,9 @@ impl CompileContext {
                     (signature.param_options.len(), signature)
                 };
 
-                for i in 0..arg_count {
+                for _ in 0..arg_count {
+                    // TODO: re-enable after Pr47 fixes the issues
+                    /*
                     self.code.push(Insc::TypeCheck(args[i], unsafe {
                         if let TyckInfo::Function(func) = signature.func_type.as_ref() {
                             func.params.as_ref()[i].clone()
@@ -631,10 +633,11 @@ impl CompileContext {
                             unreachable!()
                         }
                     }));
+                    */
                 }
 
                 assert_eq!(arg_count, call.0.len() - 1);
-                if is_async {
+                if !is_async {
                     self.code.push(Insc::FFICallRtlc(
                         ffi_func_id,
                         unsafe { self.slice_arena.unsafe_make(&args) },

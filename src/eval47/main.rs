@@ -23,22 +23,20 @@ async fn run_program(
     func_id: usize,
     args: Vec<pr47::data::Value>
 ) {
-    for _ in 0..10 {
-        let alloc: DefaultAlloc = DefaultAlloc::new();
-        let mut vm_thread: Box<VMThread<DefaultAlloc>> =
-            create_vm_main_thread(alloc, &program).await;
+    let alloc: DefaultAlloc = DefaultAlloc::new();
+    let mut vm_thread: Box<VMThread<DefaultAlloc>> =
+        create_vm_main_thread(alloc, &program).await;
 
-        let start_time = std::time::Instant::now();
-        let result: Result<Vec<pr47::data::Value>, Exception> = unsafe {
-            vm_thread_run_function::<DefaultAlloc, false>(
-                UncheckedSendSync::new((&mut vm_thread, func_id, &args))
-            ).unwrap_no_debug().await.into_inner()
-        };
-        let end_time = std::time::Instant::now();
-        eprintln!("elapsed time = {}", (end_time - start_time).as_millis());
+    let start_time = std::time::Instant::now();
+    let result: Result<Vec<pr47::data::Value>, Exception> = unsafe {
+        vm_thread_run_function::<DefaultAlloc, false>(
+            UncheckedSendSync::new((&mut vm_thread, func_id, &args))
+        ).unwrap_no_debug().await.into_inner()
+    };
+    let end_time = std::time::Instant::now();
+    eprintln!("elapsed time = {}", (end_time - start_time).as_millis());
 
-        result.unwrap_no_debug();
-    }
+    result.unwrap_no_debug();
 }
 
 fn main() {
