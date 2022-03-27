@@ -9,7 +9,7 @@ use sexpr_ir::gast::symbol::Symbol;
 use xjbutil::boxed_slice;
 use xjbutil::korobka::Korobka;
 use xjbutil::slice_arena::SliceArena;
-use crate::ast::{Expr, Function, TopLevel};
+use crate::ast::{Cond, Expr, Function, Let, Set, TopLevel};
 use crate::eval47::commons::{CompiledFunction, CompiledProgram, FFIAsyncFunction, FFIFunction};
 use crate::eval47::data_map::GValue;
 use crate::eval47::min_scope_analysis::AnalyseResult;
@@ -146,8 +146,14 @@ impl CompileContext {
         };
         self.compiling_function_chain.push(compiling_function);
 
-        for stmt in func.body.iter() {
-            self.compile_stmt(stmt, analyse_result, None);
+        let ret_pos = self.compile_stmt_list(&func.body, analyse_result);
+        if let Some(ret_pos) = ret_pos {
+            self.code.push(Insc::ReturnOne(ret_pos));
+        } else {
+            let ret_pos = self.compiling_function_chain.last_mut().unwrap()
+                .allocate_temp();
+            self.code.push(Insc::MakeNull(ret_pos));
+            self.code.push(Insc::ReturnOne(ret_pos));
         }
 
         let compiling_function = self.compiling_function_chain.pop().unwrap();
@@ -159,6 +165,18 @@ impl CompileContext {
             param_tyck_info: boxed_slice![],
             exc_handlers: None
         });
+    }
+
+    fn compile_stmt_list(
+        &mut self,
+        stmt_list: &[TopLevel],
+        analyse_result: &AnalyseResult
+    ) -> Option<usize> {
+        let mut ret = None;
+        for stmt in stmt_list {
+            ret = self.compile_stmt(stmt, analyse_result, None);
+        }
+        ret
     }
 
     fn compile_stmt(
@@ -196,8 +214,8 @@ impl CompileContext {
         match expr {
             Expr::Value(value) => self.compile_value(value, analyse_result, tgt),
             Expr::Variable(var) => self.compile_var(var.clone(), analyse_result, tgt),
-            Expr::Lambda(lambda) => self.compile_lambda(lambda, analyse_result, tgt),
-            Expr::Let(let_item) => self.compile_let(let_item, analyse_result, tgt),
+            Expr::Lambda(lambda) => self.compile_lambda(lambda.clone(), analyse_result, tgt),
+            Expr::Let(let_item) => self.compile_let(let_item.clone(), analyse_result, tgt),
             Expr::Set(set) => self.compile_set(set, analyse_result, tgt),
             Expr::Cond(cond) => self.compile_cond(cond, analyse_result, tgt),
             Expr::FunctionCall(call) => self.compile_call(call, analyse_result, tgt),
@@ -293,41 +311,6 @@ impl CompileContext {
             "Function" => {
                 let func_id = var_ref[1].clone().try_into().unwrap();
                 let func_id = bitcast_i64_usize(func_id);
-                let params: Vec<GValue> = analyse_result.functions
-                    .get_raw_key(func_id, "ParamVarIDs")
-                    .unwrap()
-                    .clone()
-                    .try_into()
-                    .unwrap();
-                let captures: Vec<GValue> = analyse_result.functions
-                    .get_raw_key(func_id, "Captures")
-                    .unwrap()
-                    .clone()
-                    .try_into()
-                    .unwrap();
-                let captures: Vec<_> = captures.into_iter()
-                    .map(|item: GValue| {
-                        let item: Vec<GValue> = item.try_into().unwrap();
-                        (
-                            item[0].clone().try_into().unwrap(),
-                            bitcast_i64_usize(item[1].clone().try_into().unwrap())
-                        )
-                    })
-                    .collect();
-
-                let mut captured_item_address = Vec::new();
-                for (is_another_capture, item_id) in captures {
-                    let item_id = if is_another_capture {
-                        item_id
-                    } else {
-                        self.compiling_function_chain.last().unwrap()
-                            .translate_local_id_to_address(item_id)
-                    };
-                    captured_item_address.push(item_id);
-                }
-                let captured_item_address = unsafe {
-                    self.slice_arena.unsafe_make(&captured_item_address)
-                };
 
                 let tgt = if let Some(tgt) = tgt {
                     tgt
@@ -335,11 +318,7 @@ impl CompileContext {
                     self.compiling_function_chain.last_mut().unwrap().allocate_temp()
                 };
 
-                let vt = self.create_closure_vt(params.len());
-                let vt_ptr = vt.as_nonnull();
-                self.vt_pool.push(vt);
-
-                self.code.push(Insc::CreateClosure(func_id, captured_item_address, vt_ptr, tgt));
+                self.convert_func_to_closure(func_id, analyse_result, tgt);
                 tgt
             },
             "FFI" => {
@@ -347,6 +326,92 @@ impl CompileContext {
             },
             _ => unreachable!()
         }
+    }
+
+    fn compile_lambda(
+        &mut self,
+        lambda: Handle<Function>,
+        analyse_result: &AnalyseResult,
+        tgt: Option<usize>
+    ) -> usize {
+        self.compile_function(lambda.clone(), analyse_result);
+        let func_id = analyse_result.data_collection.get(lambda.as_ref(), "FunctionID")
+            .unwrap()
+            .clone()
+            .try_into()
+            .unwrap();
+        let func_id = bitcast_i64_usize(func_id);
+
+        let tgt = if let Some(tgt) = tgt {
+            tgt
+        } else {
+            self.compiling_function_chain.last_mut().unwrap().allocate_temp()
+        };
+        self.convert_func_to_closure(func_id, analyse_result, tgt);
+        tgt
+    }
+
+    fn compile_let(
+        &mut self,
+        let_item: Handle<Let>,
+        analyse_result: &AnalyseResult,
+        tgt: Option<usize>
+    ) -> usize {
+        let mut tgt = tgt;
+        for bind in let_item.binds.iter() {
+            let var_id = analyse_result.data_collection.get(bind.0.as_ref(), "VarID")
+                .unwrap()
+                .clone()
+                .try_into()
+                .unwrap();
+            let var_id = bitcast_i64_usize(var_id);
+            self.compile_expr(&bind.1, analyse_result, Some(var_id));
+        }
+
+        let body_ret = self.compile_stmt_list(&let_item.body, analyse_result);
+        let tgt = if let Some(tgt) = tgt {
+            tgt
+        } else {
+            self.compiling_function_chain.last_mut().unwrap().allocate_temp()
+        };
+
+        if let Some(ret_pos) = body_ret {
+            self.code.push(Insc::Move(ret_pos, tgt));
+        } else {
+            self.code.push(Insc::MakeNull(tgt));
+        }
+        tgt
+    }
+
+    fn compile_set(
+        &mut self,
+        set: Handle<Set>,
+        analyse_result: &AnalyseResult,
+        tgt: Option<usize>
+    ) -> usize {
+        let var_id = analyse_result.data_collection.get(set.as_ref(), "VarID")
+            .unwrap()
+            .clone()
+            .try_into()
+            .unwrap();
+        let var_id = bitcast_i64_usize(var_id);
+        self.compile_expr(&set.value, analyse_result, Some(var_id));
+
+        if let Some(tgt) = tgt {
+            self.code.push(Insc::Move(var_id, tgt));
+            tgt
+        } else {
+            var_id
+        }
+    }
+
+    fn compile_cond(
+        &mut self,
+        cond: Handle<Cond>,
+        analyse_result: &AnalyseResult,
+        tgt: Option<usize>
+    ) -> usize {
+        
     }
 
     fn display_compiling_function(&self) {
@@ -365,6 +430,50 @@ impl CompileContext {
 }
 
 impl CompileContext {
+    fn convert_func_to_closure(&mut self, func_id: usize, analyse_result: &AnalyseResult, tgt: usize) {
+        let params: Vec<GValue> = analyse_result.functions
+            .get_raw_key(func_id, "ParamVarIDs")
+            .unwrap()
+            .clone()
+            .try_into()
+            .unwrap();
+        let captures: Vec<GValue> = analyse_result.functions
+            .get_raw_key(func_id, "Captures")
+            .unwrap()
+            .clone()
+            .try_into()
+            .unwrap();
+        let captures: Vec<_> = captures.into_iter()
+            .map(|item: GValue| {
+                let item: Vec<GValue> = item.try_into().unwrap();
+                (
+                    item[0].clone().try_into().unwrap(),
+                    bitcast_i64_usize(item[1].clone().try_into().unwrap())
+                )
+            })
+            .collect();
+
+        let mut captured_item_address = Vec::new();
+        for (is_another_capture, item_id) in captures {
+            let item_id = if is_another_capture {
+                item_id
+            } else {
+                self.compiling_function_chain.last().unwrap()
+                    .translate_local_id_to_address(item_id)
+            };
+            captured_item_address.push(item_id);
+        }
+        let captured_item_address = unsafe {
+            self.slice_arena.unsafe_make(&captured_item_address)
+        };
+
+        let vt = self.create_closure_vt(params.len());
+        let vt_ptr = vt.as_nonnull();
+        self.vt_pool.push(vt);
+
+        self.code.push(Insc::CreateClosure(func_id, captured_item_address, vt_ptr, tgt));
+    }
+
     fn create_closure_vt(&mut self, closure_arg_count: usize) -> Korobka<GenericTypeVT> {
         let closure_arg_types: Vec<NonNull<TyckInfo>> = (0..closure_arg_count).into_iter()
             .map(|_| self.tyck_info_pool.get_any_type())

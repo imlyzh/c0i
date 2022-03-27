@@ -314,6 +314,7 @@ impl AnalyseContext {
         scope_chain: &mut Option<Box<Scope>>,
         let_item: Handle<Let>
     ) {
+        *scope_chain = Some(Box::new(Scope::new(scope_chain.take())));
         for bind in let_item.binds.iter() {
             if BUILTIN_OPS.contains(&bind.0.0.as_str()) {
                 panic!("should not re-define builtin op");
@@ -334,6 +335,7 @@ impl AnalyseContext {
         }
 
         self.analyse_stmt_list(result, scope_chain, &let_item.body);
+        *scope_chain = scope_chain.take().unwrap().parent;
     }
 
     fn analyse_set(
@@ -357,8 +359,14 @@ impl AnalyseContext {
             .lookup(&mut lookup_context, set.name.0.as_str())
             .expect("variable not defined");
         match lookup_result {
-            LookupResult::Left((is_capture, _)) => if is_capture {
+            LookupResult::Left((is_capture, var_id)) => if is_capture {
                 panic!("cannot use `set!` on a captured variable");
+            } else {
+                result.data_collection.insert(
+                    set.as_ref(),
+                    "VarID",
+                    bitcast_usize_i64(var_id)
+                );
             },
             LookupResult::Middle(_) => panic!("cannot use `set!` on a function"),
             LookupResult::Right(_) => panic!("cannot use `set!` on a FFI function")
