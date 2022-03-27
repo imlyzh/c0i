@@ -1,6 +1,8 @@
+use std::any::TypeId;
 use std::collections::HashMap;
 use std::convert::TryInto;
 use std::ptr::NonNull;
+use pr47::builtins::closure::Closure;
 use pr47::data::generic::GenericTypeVT;
 use pr47::data::tyck::{TyckInfo, TyckInfoPool};
 use pr47::vm::al31f::insc::Insc;
@@ -224,10 +226,13 @@ impl CompileContext {
 
     fn compile_expr_for_fn_call(
         &mut self,
-        _expr: &Expr,
-        _analyse_result: &AnalyseResult
+        expr: &Expr,
+        analyse_result: &AnalyseResult
     ) -> MantisGod<(bool, usize), usize, (bool, usize)> {
-        todo!()
+        match expr {
+            Expr::Variable(var) => self.compile_var_for_fn_call(var.clone(), analyse_result),
+            _ => MantisGod::Left((false, self.compile_expr(expr, analyse_result, None)))
+        }
     }
 
     fn compile_value(
@@ -328,6 +333,38 @@ impl CompileContext {
         }
     }
 
+    fn compile_var_for_fn_call(
+        &mut self,
+        var: Handle<Symbol>,
+        analyse_result: &AnalyseResult,
+    ) -> MantisGod<(bool, usize), usize, (bool, usize)> {
+        let var_ref: Vec<GValue> = analyse_result.data_collection.get(var.as_ref(), "Ref")
+            .unwrap()
+            .clone()
+            .try_into()
+            .unwrap();
+        match <GValue as TryInto<String>>::try_into(var_ref[0].clone()).unwrap().as_str() {
+            "Variable" => {
+                let var_id = var_ref[1].clone().try_into().unwrap();
+                let var_id = bitcast_i64_usize(var_id);
+                let is_capture: bool = var_ref[2].clone().try_into().unwrap();
+                MantisGod::Left((is_capture, var_id))
+            },
+            "Function" => {
+                let func_id = var_ref[1].clone().try_into().unwrap();
+                let func_id = bitcast_i64_usize(func_id);
+                MantisGod::Middle(func_id)
+            },
+            "FFI" => {
+                let ffi_func_id = var_ref[1].clone().try_into().unwrap();
+                let ffi_func_id = bitcast_i64_usize(ffi_func_id);
+                let is_async = var_ref[2].clone().try_into().unwrap();
+                MantisGod::Right((is_async, ffi_func_id))
+            },
+            _ => unreachable!()
+        }
+    }
+
     fn compile_lambda(
         &mut self,
         lambda: Handle<Function>,
@@ -357,7 +394,6 @@ impl CompileContext {
         analyse_result: &AnalyseResult,
         tgt: Option<usize>
     ) -> usize {
-        let mut tgt = tgt;
         for bind in let_item.binds.iter() {
             let var_id = analyse_result.data_collection.get(bind.0.as_ref(), "VarID")
                 .unwrap()
@@ -480,9 +516,76 @@ impl CompileContext {
         }
 
         match called_func {
-            MantisGod::Left(_) => {}
-            MantisGod::Middle(_) => {}
-            MantisGod::Right(_) => {}
+            MantisGod::Left((is_capture, var_id)) => {
+                let var_address = if is_capture {
+                    var_id
+                } else {
+                    self.compiling_function_chain.last_mut()
+                        .unwrap()
+                        .translate_local_id_to_address(var_id)
+                };
+
+                let closure_tyck_info = unsafe {
+                    let closure_vt = self.create_closure_vt(call.0.len() - 1);
+                    self.tyck_info_pool.create_container_type(
+                        TypeId::of::<Closure>(),
+                        closure_vt.as_ref()
+                            .tyck_info
+                            .as_ref()
+                            .params.as_ref()
+                    )
+                };
+
+                // TODO support va-args
+                self.code.push(Insc::TypeCheck(var_address, closure_tyck_info));
+                self.code.push(Insc::CallPtr(var_address, unsafe {
+                    self.slice_arena.unsafe_make(&args)
+                }, unsafe {
+                    self.slice_arena.unsafe_make(&[tgt])
+                }));
+            },
+            MantisGod::Middle(func_id) => {
+                let arg_count = self.functions.get(&func_id)
+                    .as_ref()
+                    .unwrap()
+                    .arg_count;
+                // TODO support va-args
+                assert_eq!(arg_count, call.0.len() - 1);
+                self.code.push(Insc::Call(func_id, unsafe {
+                    self.slice_arena.unsafe_make(&args)
+                }, unsafe {
+                    self.slice_arena.unsafe_make(&[tgt])
+                }));
+            },
+            MantisGod::Right((is_async, ffi_func_id)) => {
+                let arg_count = if is_async {
+                    let signature = self.ffi_funcs[ffi_func_id].signature(&mut self.tyck_info_pool);
+                    signature.param_options.len()
+                } else {
+                    let signature = self.async_ffi_funcs[ffi_func_id]
+                        .signature(&mut self.tyck_info_pool);
+                    signature.param_options.len()
+                };
+
+                assert_eq!(arg_count, call.0.len() - 1);
+                if is_async {
+                    self.code.push(Insc::FFICallRtlc(
+                        ffi_func_id,
+                        unsafe { self.slice_arena.unsafe_make(&args) },
+                        unsafe { self.slice_arena.unsafe_make(&[tgt]) }
+                    ));
+                } else {
+                    let tmp = self.compiling_function_chain.last_mut().unwrap().allocate_temp();
+                    self.code.push(Insc::FFICallAsync(
+                        ffi_func_id,
+                        unsafe { self.slice_arena.unsafe_make(&args) },
+                        tmp
+                    ));
+                    self.code.push(Insc::Await(tmp, unsafe {
+                        self.slice_arena.unsafe_make(&[tgt])
+                    }));
+                }
+            }
         }
 
         tgt
@@ -542,20 +645,20 @@ impl CompileContext {
         };
 
         let vt = self.create_closure_vt(params.len());
-        let vt_ptr = vt.as_nonnull();
-        self.vt_pool.push(vt);
-
-        self.code.push(Insc::CreateClosure(func_id, captured_item_address, vt_ptr, tgt));
+        self.code.push(Insc::CreateClosure(func_id, captured_item_address, vt, tgt));
     }
 
-    fn create_closure_vt(&mut self, closure_arg_count: usize) -> Korobka<GenericTypeVT> {
+    fn create_closure_vt(&mut self, closure_arg_count: usize) -> NonNull<GenericTypeVT> {
         let closure_arg_types: Vec<NonNull<TyckInfo>> = (0..closure_arg_count).into_iter()
             .map(|_| self.tyck_info_pool.get_any_type())
             .collect();
 
-        Korobka::new(pr47::builtins::closure::create_closure_vt(
+        let korobka = Korobka::new(pr47::builtins::closure::create_closure_vt(
             &mut self.tyck_info_pool,
             &closure_arg_types
-        ))
+        ));
+        let ret = korobka.as_nonnull();
+        self.vt_pool.push(korobka);
+        ret
     }
 }
