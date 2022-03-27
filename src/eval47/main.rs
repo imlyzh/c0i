@@ -32,9 +32,13 @@ fn main() {
     eprintln!("Performing analyse");
     let context = AnalyseContext::new();
     let analyse_result = context.min_scope_analyse(&top_levels);
-    let result = serde_json::to_string_pretty(&analyse_result.data_collection).unwrap();
 
     if args.contains(&"--only-analyse".to_string()) {
-        println!("\n{}", result);
+        let data_collection =
+            serde_json::to_string_pretty(&analyse_result.data_collection).unwrap();
+        println!("\ndata_collection = {}", data_collection);
+
+        let functions = serde_json::to_string_pretty(&analyse_result.functions).unwrap();
+        println!("\nfunctions = {}", functions);
     }
 }

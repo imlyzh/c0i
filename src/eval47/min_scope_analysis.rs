@@ -196,13 +196,13 @@ impl AnalyseContext {
             Expr::Value(value) => self.analyse_value(result, scope_chain, value),
             Expr::Variable(var) => self.analyse_variable(result, scope_chain, var.clone()),
             Expr::Lambda(func) => {
-                self.analyse_function(result, scope_chain, func.clone());
                 let func_id = scope_chain.as_mut().unwrap().allocate_func();
                 result.data_collection.insert(
                     func.clone().as_ref(),
                     "FunctionID",
                     bitcast_usize_i64(func_id)
                 );
+                self.analyse_function(result, scope_chain, func.clone());
             },
             Expr::Let(let_item) => self.analyse_let(result, scope_chain, let_item.clone()),
             Expr::Set(set_item) => self.analyse_set(result, scope_chain, set_item.clone()),
