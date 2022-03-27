@@ -117,7 +117,7 @@ struct CompilingFunction {
 
 impl CompilingFunction {
     fn allocate_temp(&mut self) -> usize {
-        let ret = self.local_count + self.capture_count;
+        let ret = self.local_count;
         self.local_count += 1;
         ret
     }
@@ -396,9 +396,9 @@ impl CompileContext {
                 MantisGod::Middle(func_id)
             },
             "FFI" => {
-                let ffi_func_id = var_ref[1].clone().try_into().unwrap();
+                let is_async = var_ref[1].clone().try_into().unwrap();
+                let ffi_func_id = var_ref[2].clone().try_into().unwrap();
                 let ffi_func_id = bitcast_i64_usize(ffi_func_id);
-                let is_async = var_ref[2].clone().try_into().unwrap();
                 MantisGod::Right((is_async, ffi_func_id))
             },
             _ => unreachable!()
@@ -605,8 +605,9 @@ impl CompileContext {
                 }));
             },
             MantisGod::Right((is_async, ffi_func_id)) => {
-                let (arg_count, signature) = if is_async {
-                    let signature = self.ffi_funcs[ffi_func_id].signature(&mut self.tyck_info_pool);
+                let (arg_count, signature) = if !is_async {
+                    let signature = self.ffi_funcs[ffi_func_id]
+                        .signature(&mut self.tyck_info_pool);
                     (signature.param_options.len(), signature)
                 } else {
                     let signature = self.async_ffi_funcs[ffi_func_id]

@@ -1,6 +1,6 @@
 use pr47::data::tyck::TyckInfoPool;
 use pr47::data::Value;
-use pr47::ffi::{FFIException, Signature};
+use pr47::ffi::{DataOption, FFIException, Signature};
 use pr47::ffi::sync_fn::{FunctionBase, VMContext};
 use xjbutil::boxed_slice;
 
@@ -14,7 +14,7 @@ impl FunctionBase for DbgIntBind {
                 &[],
                 &[]
             ),
-            param_options: boxed_slice![],
+            param_options: boxed_slice![DataOption::Raw],
             ret_option: boxed_slice![]
         }
     }

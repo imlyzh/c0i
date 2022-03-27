@@ -7,3 +7,8 @@
 
 (defun (car pair) (pair 0))
 (defun (cdr pair) (pair 1))
+
+(defun (application-start)
+  (dbg-int (car (cons 114 514)))
+)
+
