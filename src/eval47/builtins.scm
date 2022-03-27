@@ -11,8 +11,14 @@
 (defun (car pair) (pair 0))
 (defun (cdr pair) (pair 1))
 
+(defun (fibonacci n)
+    (cond ((= n 0) 0)
+          ((= n 1) 1)
+          (else (+ (fibonacci (- n 1))
+                   (fibonacci (- n 2))))
+    )
+)
+
 (defun (application-start)
-  (define pair (cons 114 514))
-  (dbg-int (car pair))
-  (dbg-int (cdr pair))
+  (dbg-int (fibonacci 35))
 )

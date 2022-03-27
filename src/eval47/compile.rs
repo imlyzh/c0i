@@ -572,6 +572,16 @@ impl CompileContext {
                     self.code.push(Insc::EqAny(args[0], args[1], tgt));
                     return tgt;
                 },
+                "+" => {
+                    assert_eq!(args.len(), 2);
+                    self.code.push(Insc::AddAny(args[0], args[1], tgt));
+                    return tgt;
+                },
+                "-" => {
+                    assert_eq!(args.len(), 2);
+                    self.code.push(Insc::SubAny(args[0], args[1], tgt));
+                    return tgt;
+                },
                 _ => {}
             }
         }
@@ -600,10 +610,13 @@ impl CompileContext {
                 }));
             },
             MantisGod::Middle(func_id) => {
-                let arg_count = self.functions.get(&func_id)
-                    .as_ref()
+                let p_args: Vec<_> = analyse_result.functions.get_raw_key(func_id, "ParamVarIDs")
                     .unwrap()
-                    .arg_count;
+                    .clone()
+                    .try_into()
+                    .unwrap();
+                let arg_count = p_args.len();
+
                 // TODO support va-args
                 assert_eq!(arg_count, call.0.len() - 1);
                 self.code.push(Insc::Call(func_id, unsafe {
