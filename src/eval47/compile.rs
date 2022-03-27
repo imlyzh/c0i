@@ -1,5 +1,5 @@
 use std::any::TypeId;
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::convert::TryInto;
 use std::ptr::NonNull;
 use pr47::builtins::closure::Closure;
@@ -30,7 +30,9 @@ pub struct CompileContext {
     async_ffi_funcs: Box<[FFIAsyncFunction]>,
 
     compiling_function_chain: Vec<CompilingFunction>,
-    compiling_function_names: Vec<String>
+    compiling_function_names: Vec<String>,
+
+    func_queue: VecDeque<Handle<Function>>
 }
 
 pub struct CompileResult {
@@ -70,7 +72,9 @@ impl CompileContext {
                 .into_boxed_slice(),
 
             compiling_function_chain: Vec::new(),
-            compiling_function_names: Vec::new()
+            compiling_function_names: Vec::new(),
+
+            func_queue: VecDeque::new()
         };
         context
     }
@@ -83,7 +87,12 @@ impl CompileContext {
         eprintln!("Compiling to bytecode");
 
         for piece in ast {
-            self.compile_top_level(piece, analyse_result);
+            if let TopLevel::Function(func) = piece {
+                self.func_queue.push_back(func.clone());
+            }
+        }
+        while let Some(func_handle) = self.func_queue.pop_front() {
+            self.compile_function(func_handle, analyse_result);
         }
 
         let mut functions = self.functions.into_iter().collect::<Vec<_>>();
@@ -117,6 +126,11 @@ struct CompilingFunction {
 
 impl CompilingFunction {
     fn allocate_temp(&mut self) -> usize {
+        eprintln!(
+            "allocating one more temp on frame {:x?}, now we have {} local vars",
+            self as *mut _,
+            self.local_count + 1
+        );
         let ret = self.local_count;
         self.local_count += 1;
         ret
@@ -128,14 +142,6 @@ impl CompilingFunction {
 }
 
 impl CompileContext {
-    fn compile_top_level(&mut self, top_level: &TopLevel, analyse_result: &AnalyseResult) {
-        if let TopLevel::Function(func_handle) = top_level {
-            self.compile_function(func_handle.clone(), analyse_result);
-        } else {
-            unreachable!()
-        }
-    }
-
     fn compile_function(&mut self, func: Handle<Function>, analyse_result: &AnalyseResult) {
         let func_id: i64 = analyse_result.data_collection
             .get(func.as_ref(), "FunctionID")
@@ -171,7 +177,7 @@ impl CompileContext {
         let base_frame_size = bitcast_i64_usize(base_frame_size);
 
         self.compiling_function_names.push(func_name);
-        self.display_compiling_function();
+        self.display_compiling_function(false);
 
         let start_addr = self.code.len();
         let compiling_function = CompilingFunction {
@@ -193,6 +199,7 @@ impl CompileContext {
         }
 
         let compiling_function = self.compiling_function_chain.pop().unwrap();
+        self.display_compiling_function(true);
         self.compiling_function_names.pop().unwrap();
         self.functions.insert(func_id, CompiledFunction {
             start_addr,
@@ -224,7 +231,7 @@ impl CompileContext {
     ) -> Option<usize> {
         match stmt {
             TopLevel::Function(func_handle) => {
-                self.compile_function(func_handle.clone(), analyse_result);
+                self.func_queue.push_back(func_handle.clone());
                 None
             },
             TopLevel::Bind(_, expr) => {
@@ -411,7 +418,8 @@ impl CompileContext {
         analyse_result: &AnalyseResult,
         tgt: Option<usize>
     ) -> usize {
-        self.compile_function(lambda.clone(), analyse_result);
+        self.func_queue.push_back(lambda.clone());
+
         let func_id = analyse_result.data_collection.get(lambda.as_ref(), "FunctionID")
             .unwrap()
             .clone()
@@ -530,7 +538,7 @@ impl CompileContext {
         if let Some(else_branch) = cond.other.as_ref() {
             self.compile_expr(else_branch, analyse_result, Some(tgt));
         } else {
-            self.code.push(Insc::MakeIntConst(1145141919810, 0));
+            self.code.push(Insc::CreateObject(0));
             self.code.push(Insc::Raise(0));
         }
 
@@ -649,11 +657,16 @@ impl CompileContext {
         tgt
     }
 
-    fn display_compiling_function(&self) {
+    fn display_compiling_function(&self, is_quitting: bool) {
         for _ in 0..self.compiling_function_names.len() {
             eprint!("..");
         }
         eprint!(" ");
+        if is_quitting {
+            eprintln!("quitting from last frame");
+            return;
+        }
+
         for i in 0..self.compiling_function_names.len() {
             eprint!("{}", self.compiling_function_names[i]);
             if i != self.compiling_function_names.len() - 1 {

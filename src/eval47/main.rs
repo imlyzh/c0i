@@ -98,6 +98,12 @@ fn main() {
     );
     let result = compile_context.compile(&top_levels, &analyse_result);
 
+    unsafe {
+        for (idx, insc) in result.cp.code.iter().enumerate() {
+            eprintln!(" {}) {}", idx, insc.unsafe_to_string());
+        }
+    }
+
     let application_start =
         analyse_result.global_data_map.get("ApplicationStartFuncID")
             .expect("no `application-start` procedure found in the program")
