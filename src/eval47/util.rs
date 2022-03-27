@@ -22,6 +22,8 @@ pub fn bitcast_i64_usize(src: i64) -> usize {
     unsafe { transmute(src) }
 }
 
+pub use xjbutil::either::Either as Mantis;
+
 #[derive(Clone, Debug)]
 pub enum MantisGod<T1, T2, T3> {
     Left(T1),

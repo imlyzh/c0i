@@ -118,6 +118,15 @@ impl AnalyseContext {
             .unwrap();
         let func_id = bitcast_i64_usize(func_id);
 
+        if let Some(name) = func.as_ref().name.as_ref() {
+            if name.as_ref().0.as_str() == "--pr47-builtin-cons" {
+                result.global_data_map.insert(
+                    "BuiltinConsFuncID".into(),
+                    GValue::Int(bitcast_usize_i64(func_id)),
+                );
+            }
+        }
+
         *scope_chain = Some(Box::new(Scope::new_function_frame(scope_chain.take())));
 
         let mut var_ids = vec![];

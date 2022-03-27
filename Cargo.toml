@@ -37,6 +37,7 @@ pr47 = { git="https://github.com/Pr47/Pr47", default-features=false, features=[
 xjbutil = { git="https://github.com/Pr47/xjbutil", default-features=false, features=[
     "slice-arena",
     "either",
+    "makro",
     "value",
     "value-serde"
 ] }
