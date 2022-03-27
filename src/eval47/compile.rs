@@ -9,7 +9,7 @@ use sexpr_ir::gast::symbol::Symbol;
 use xjbutil::boxed_slice;
 use xjbutil::korobka::Korobka;
 use xjbutil::slice_arena::SliceArena;
-use crate::ast::{Cond, Expr, Function, Let, Set, TopLevel};
+use crate::ast::{Call, Cond, Expr, Function, Let, Set, TopLevel};
 use crate::eval47::commons::{CompiledFunction, CompiledProgram, FFIAsyncFunction, FFIFunction};
 use crate::eval47::data_map::GValue;
 use crate::eval47::min_scope_analysis::AnalyseResult;
@@ -216,9 +216,9 @@ impl CompileContext {
             Expr::Variable(var) => self.compile_var(var.clone(), analyse_result, tgt),
             Expr::Lambda(lambda) => self.compile_lambda(lambda.clone(), analyse_result, tgt),
             Expr::Let(let_item) => self.compile_let(let_item.clone(), analyse_result, tgt),
-            Expr::Set(set) => self.compile_set(set, analyse_result, tgt),
-            Expr::Cond(cond) => self.compile_cond(cond, analyse_result, tgt),
-            Expr::FunctionCall(call) => self.compile_call(call, analyse_result, tgt),
+            Expr::Set(set) => self.compile_set(set.clone(), analyse_result, tgt),
+            Expr::Cond(cond) => self.compile_cond(cond.clone(), analyse_result, tgt),
+            Expr::FunctionCall(call) => self.compile_call(call.clone(), analyse_result, tgt)
         }
     }
 
@@ -226,7 +226,7 @@ impl CompileContext {
         &mut self,
         _expr: &Expr,
         _analyse_result: &AnalyseResult
-    ) -> MantisGod<usize, usize, usize> {
+    ) -> MantisGod<(bool, usize), usize, (bool, usize)> {
         todo!()
     }
 
@@ -411,7 +411,81 @@ impl CompileContext {
         analyse_result: &AnalyseResult,
         tgt: Option<usize>
     ) -> usize {
-        
+        let tgt = if let Some(tgt) = tgt { tgt } else {
+            self.compiling_function_chain.last_mut().unwrap().allocate_temp()
+        };
+
+        let mut last_condition_fail_jump_idx: Option<usize> = None;
+        let mut jump_to_end_idx = Vec::new();
+        for pair in cond.pairs.iter() {
+            if let Some(idx) = last_condition_fail_jump_idx {
+                let code_len = self.code.len();
+                if let Insc::JumpIfFalse(_, dest) = &mut self.code[idx] {
+                    *dest = code_len;
+                } else {
+                    unreachable!()
+                }
+            }
+
+            let condition = self.compile_expr(&pair.0, analyse_result, None);
+            let code_idx = self.code.len();
+            last_condition_fail_jump_idx = Some(code_idx);
+
+            self.code.push(Insc::JumpIfFalse(condition, 0));
+            self.compile_expr(&pair.1, analyse_result, Some(tgt));
+            let code_idx = self.code.len();
+            jump_to_end_idx.push(code_idx);
+            self.code.push(Insc::Jump(0));
+        }
+
+        if let Some(idx) = last_condition_fail_jump_idx {
+            let code_len = self.code.len();
+            if let Insc::JumpIfFalse(_, dest) = &mut self.code[idx] {
+                *dest = code_len;
+            } else {
+                unreachable!()
+            }
+        }
+
+        if let Some(else_branch) = cond.other.as_ref() {
+            self.compile_expr(else_branch, analyse_result, Some(tgt));
+        } else {
+            self.code.push(Insc::MakeIntConst(1145141919810, 0));
+            self.code.push(Insc::Raise(0));
+        }
+
+        let code_len = self.code.len();
+        for idx in jump_to_end_idx {
+            if let Insc::Jump(dest) = &mut self.code[idx]{
+                *dest = code_len;
+            }
+        }
+        tgt
+    }
+
+    fn compile_call(
+        &mut self,
+        call: Handle<Call>,
+        analyse_result: &AnalyseResult,
+        tgt: Option<usize>
+    ) -> usize {
+        let tgt = if let Some(tgt) = tgt { tgt } else {
+            self.compiling_function_chain.last_mut().unwrap().allocate_temp()
+        };
+
+        let called_func = self.compile_expr_for_fn_call(&call.0[0], analyse_result);
+        let mut args = Vec::new();
+        for arg in call.as_ref().0.iter().skip(1) {
+            args.push(self.compile_expr(arg, analyse_result, None));
+        }
+
+        match called_func {
+            MantisGod::Left(_) => {}
+            MantisGod::Middle(_) => {}
+            MantisGod::Right(_) => {}
+        }
+
+        tgt
     }
 
     fn display_compiling_function(&self) {

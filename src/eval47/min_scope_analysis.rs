@@ -362,7 +362,7 @@ impl AnalyseContext {
             LookupResult::Left((is_capture, var_id)) => if is_capture {
                 panic!("cannot use `set!` on a captured variable");
             } else {
-                result.data_collection.insert(
+                lookup_context.2.data_collection.insert(
                     set.as_ref(),
                     "VarID",
                     bitcast_usize_i64(var_id)
