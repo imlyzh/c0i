@@ -96,14 +96,14 @@ impl AnalyseContext {
 
         for global in globals {
             if let TopLevel::Function(func_handle) = global {
-                self.analyze_function(result, scope_chain, func_handle.clone())
+                self.analyse_function(result, scope_chain, func_handle.clone())
             } else {
                 unreachable!();
             }
         }
     }
 
-    fn analyze_function(
+    fn analyse_function(
         &self,
         result: &mut AnalyseResult,
         scope_chain: &mut Option<Box<Scope>>,
@@ -145,7 +145,7 @@ impl AnalyseContext {
         stmt: &TopLevel
     ) {
         match stmt.borrow() {
-            TopLevel::Function(func_handle) => self.analyze_function(
+            TopLevel::Function(func_handle) => self.analyse_function(
                 result, scope_chain, func_handle.clone()
             ),
             TopLevel::Bind(var_name, expr) => {
@@ -176,7 +176,7 @@ impl AnalyseContext {
             Expr::Value(value) => self.analyze_value(result, scope_chain, value),
             Expr::Variable(var) => self.analyze_variable(result, scope_chain, var.clone()),
             Expr::Lambda(func) => {
-                self.analyze_function(result, scope_chain, func.clone());
+                self.analyse_function(result, scope_chain, func.clone());
                 let func_id = scope_chain.as_mut().unwrap().allocate_func();
                 result.data_collection.insert(
                     func.clone().as_ref(),
