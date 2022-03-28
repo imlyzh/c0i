@@ -11,7 +11,7 @@ use super::LOCATION;
 
 fn read(args: Vec<Value>) -> CResult {
     if args.len() != 1 {
-        return Err(CError::PrarmsIsNotMatching(1, args.len()));
+        return Err(CError::ArgsNotMatching(1, args.len()));
     }
     let value = args.get(0).unwrap();
     if let Value::Str(str) = value {
@@ -29,7 +29,7 @@ impl_wrap!(READ_WRAP, READ_NAME, read, "read", &LOCATION);
 
 fn car(args: Vec<Value>) -> CResult {
     if args.len() != 1 {
-        return Err(CError::PrarmsIsNotMatching(1, args.len()));
+        return Err(CError::ArgsNotMatching(1, args.len()));
     }
     let value = args.get(0).unwrap();
     if let Value::Pair(pair) = value {
@@ -44,7 +44,7 @@ impl_wrap!(CAR_WRAP, CAR_NAME, car, "car", &LOCATION);
 
 fn cdr(args: Vec<Value>) -> CResult {
     if args.len() != 1 {
-        return Err(CError::PrarmsIsNotMatching(1, args.len()));
+        return Err(CError::ArgsNotMatching(1, args.len()));
     }
     let value = args.get(0).unwrap();
     if let Value::Pair(pair) = value {
@@ -59,7 +59,7 @@ impl_wrap!(CDR_WRAP, CDR_NAME, cdr, "cdr", &LOCATION);
 
 fn cons(args: Vec<Value>) -> CResult {
     if args.len() != 2 {
-        return Err(CError::PrarmsIsNotMatching(2, args.len()));
+        return Err(CError::ArgsNotMatching(2, args.len()));
     }
     Ok(Value::Pair(Handle::new(Pair(
             args.get(0).unwrap().clone(),
@@ -105,7 +105,7 @@ impl_wrap!(VECTOR_MAP_WRAP, VECTOR_MAP_NAME, vector_map, "vector-map", &LOCATION
 
 fn vector_reduce(args: Vec<Value>) -> CResult {
     if args.len() != 2 {
-        return Err(CError::PrarmsIsNotMatching(2, args.len()));
+        return Err(CError::ArgsNotMatching(2, args.len()));
     }
     let vector = args.get(1).unwrap();
     let callable = args.get(0).unwrap();
@@ -130,7 +130,7 @@ impl_wrap!(VECTOR_REDUCE_WRAP, VECTOR_REDUCE_NAME, vector_reduce, "vector-reduce
 
 fn id(args: Vec<Value>) -> CResult {
     if args.len() != 1 {
-        return Err(CError::PrarmsIsNotMatching(1, args.len()));
+        return Err(CError::ArgsNotMatching(1, args.len()));
     }
     Ok(args.get(0).unwrap().clone())
 }

@@ -12,7 +12,7 @@ use super::LOCATION;
 
 fn native_bool_not(args: Vec<Value>) -> CResult {
     if args.len() != 1 {
-        return Err(CError::PrarmsIsNotMatching(1, args.len()));
+        return Err(CError::ArgsNotMatching(1, args.len()));
     }
     let v = args.get(0).unwrap();
     if let Value::Bool(b) = v {
@@ -27,7 +27,7 @@ impl_wrap!(BOOL_NOT_WRAP, BOOL_NOT_NAME, native_bool_not, "not", &LOCATION);
 
 fn native_bool_and(args: Vec<Value>) -> CResult {
     if args.len() != 2 {
-        return Err(CError::PrarmsIsNotMatching(1, args.len()));
+        return Err(CError::ArgsNotMatching(1, args.len()));
     }
     let a = args.get(0).unwrap();
     let b = args.get(1).unwrap();
@@ -48,7 +48,7 @@ impl_wrap!(BOOL_AND_WRAP, BOOL_AND_NAME, native_bool_and, "raw-and", &LOCATION);
 
 fn native_bool_or(args: Vec<Value>) -> CResult {
     if args.len() != 2 {
-        return Err(CError::PrarmsIsNotMatching(1, args.len()));
+        return Err(CError::ArgsNotMatching(1, args.len()));
     }
     let a = args.get(0).unwrap();
     let b = args.get(1).unwrap();

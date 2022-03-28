@@ -27,7 +27,7 @@ impl_wrap!(ADD_STR_WRAP, ADD_STR_NAME, native_add_str, "+s", &LOCATION);
 
 fn to_literal(args: Vec<Value>) -> CResult {
     if args.len() != 2 {
-        return Err(CError::PrarmsIsNotMatching(2, args.len()));
+        return Err(CError::ArgsNotMatching(2, args.len()));
     }
     let r = args.get(0).unwrap().to_string();
     Ok(Value::Str(Handle::new(r)))
