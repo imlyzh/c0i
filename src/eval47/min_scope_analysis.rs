@@ -34,7 +34,8 @@ pub const BUILTIN_OPS: &'static [&'static str] = &[
     "vector-ref",
     "vector-set!",
     "vector-push!",
-    "unused"
+    "unused",
+    "raise"
 ];
 
 pub struct AnalyseContext {

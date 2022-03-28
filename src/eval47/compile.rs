@@ -764,6 +764,15 @@ impl CompileContext {
                 self.code.push(Insc::NotAny(args[0], tgt));
                 tgt
             },
+            "raise" => {
+                assert_eq!(args.len(), 1);
+                self.code.push(Insc::Raise(args[0]));
+                tgt
+            },
+            "unused" => {
+                self.code.push(Insc::MakeBoolConst(false, tgt));
+                tgt
+            },
             _ => return None
         })
     }

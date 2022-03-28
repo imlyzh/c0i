@@ -6,8 +6,15 @@
     )
 )
 
+(define (list-length l)
+    (cond ((= l nil) 0)
+          (else (+ 1 (list-length (cdr l))))
+    )
+)
+
 (define (list-ref list n)
-    (cond ((= n 0) (car list))
+    (cond ((>= n (list-length list)) (raise "fuck you"))
+          ((= n 0) (car list))
           (else (list-ref (cdr list) (- n 1)))
     )
 )
