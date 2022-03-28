@@ -25,7 +25,7 @@ impl FunctionBase for DbgIntBind {
         rets: &[*mut Value]
     ) -> Result<(), FFIException> {
         eprintln!("DBG_INT = {}", args[0].vt_data.inner.int_value);
-        *rets[0] = Value::new_null();
+        *rets[0] = Value::new_bool(false);
         Ok(())
     }
 
@@ -60,7 +60,7 @@ impl FunctionBase for DbgStringBind {
     ) -> Result<(), FFIException> {
         let str = value_into_ref_noalias::<String>(args[0])?;
         eprintln!("DBG_STR = {}", str);
-        *rets[0] = Value::new_null();
+        *rets[0] = Value::new_bool(false);
         Ok(())
     }
 
