@@ -10,7 +10,8 @@ use sexpr_ir::gast::symbol::Symbol;
 use crate::ast::{Call, Cond, Expr, Function, Let, Set, TopLevel};
 use crate::eval47::commons::{FFIAsyncFunction, FFIFunction, Signature};
 use crate::eval47::data_map::{DataCollection, GValue};
-use crate::eval47::util::{bitcast_i64_usize, bitcast_usize_i64, clone_signature, MantisGod};
+use crate::eval47::util::{bitcast_i64_usize, bitcast_usize_i64, clone_signature, Guard, MantisGod};
+use crate::guard;
 use crate::value::Value;
 
 pub const BUILTIN_OPS: &'static [&'static str] = &[
@@ -141,6 +142,11 @@ impl AnalyseContext {
             }
         }
 
+        let mut g = guard!(
+            "analyse function `{}` (func_id = {})",
+            func.as_ref().name.as_ref().map_or("<anonymous>", |x| x.0.as_str()),
+            func_id
+        );
         *scope_chain = Some(Box::new(Scope::new_function_frame(scope_chain.take())));
 
         let mut var_ids = vec![];
@@ -179,6 +185,7 @@ impl AnalyseContext {
         );
 
         *scope_chain = scope_chain.take().unwrap().parent;
+        g.cancel();
     }
 
     fn analyse_stmt(
@@ -193,6 +200,7 @@ impl AnalyseContext {
             ),
             TopLevel::Bind(var_name, expr) => {
                 let var_id = scope_chain.as_mut().unwrap().add_var(var_name.0.as_str());
+                let mut g = guard!("analyse bind `{}` (var_id = {})", var_name.0.as_str(), var_id);
                 result.data_collection.insert(
                     stmt,
                     "VarID",
@@ -204,6 +212,7 @@ impl AnalyseContext {
                     var_name.0.as_str()
                 );
                 self.analyse_expr(result, scope_chain, expr);
+                g.cancel();
             }
             TopLevel::Expr(expr) => self.analyse_expr(result, scope_chain, expr)
         }
@@ -274,7 +283,10 @@ impl AnalyseContext {
         scope_chain: &mut Option<Box<Scope>>,
         var: Handle<Symbol>
     ) {
+        let mut g = guard!("analyse variable ref `{}`", var.0.as_str());
+
         if BUILTIN_OPS.contains(&var.0.as_str()) {
+            g.cancel();
             return;
         }
 
@@ -295,6 +307,8 @@ impl AnalyseContext {
             "VarName",
             var.0.as_str()
         );
+
+        g.cancel();
         match lookup_result {
             MantisGod::Left((is_capture, var_id)) => {
                 result.data_collection.insert(
@@ -328,8 +342,11 @@ impl AnalyseContext {
         scope_chain: &mut Option<Box<Scope>>,
         let_item: Handle<Let>
     ) {
+        let mut g = guard!("analyse let @{:x}", let_item.as_ref() as *const _ as usize);
         *scope_chain = Some(Box::new(Scope::new(scope_chain.take())));
         for bind in let_item.binds.iter() {
+            let mut g = guard!("analyse let binding item `{}`", bind.0.0.as_str());
+
             if BUILTIN_OPS.contains(&bind.0.0.as_str()) {
                 panic!("should not re-define builtin op");
             }
@@ -346,10 +363,13 @@ impl AnalyseContext {
                 "VarName",
                 bind.0.0.as_str()
             );
+
+            g.cancel();
         }
 
         self.analyse_stmt_list(result, scope_chain, &let_item.body);
         *scope_chain = scope_chain.take().unwrap().parent;
+        g.cancel();
     }
 
     fn analyse_set(
@@ -358,6 +378,7 @@ impl AnalyseContext {
         scope_chain: &mut Option<Box<Scope>>,
         set: Handle<Set>
     ) {
+        let mut g = guard!("analyse set `{}`", set.name.0.as_str());
         if BUILTIN_OPS.contains(&set.name.0.as_str()) {
             panic!("should not re-define builtin op");
         }
@@ -372,6 +393,7 @@ impl AnalyseContext {
         let lookup_result = scope_chain.as_mut().unwrap()
             .lookup(&mut lookup_context, set.name.0.as_str())
             .expect("variable not defined");
+        g.cancel();
         match lookup_result {
             LookupResult::Left((is_capture, var_id)) => if is_capture {
                 panic!("cannot use `set!` on a captured variable");
@@ -393,6 +415,7 @@ impl AnalyseContext {
         scope_chain: &mut Option<Box<Scope>>,
         cond: Handle<Cond>
     ) {
+        let mut g = guard!("analyse cond @{:x}", cond.as_ref() as *const _ as usize);
         for pair in cond.pairs.iter() {
             self.analyse_expr(result, scope_chain, &pair.0);
             self.analyse_expr(result, scope_chain, &pair.1);
@@ -401,6 +424,7 @@ impl AnalyseContext {
         if let Some(other) = cond.other.as_ref() {
             self.analyse_expr(result, scope_chain, other);
         }
+        g.cancel();
     }
 
     fn analyse_call(
@@ -409,9 +433,11 @@ impl AnalyseContext {
         scope_chain: &mut Option<Box<Scope>>,
         call: Handle<Call>
     ) {
+        let mut g = guard!("analyse call @{:x}", call.as_ref() as *const _ as usize);
         for arg in call.0.iter() {
             self.analyse_expr(result, scope_chain, arg);
         }
+        g.cancel();
     }
 
     fn analyse_stmt_list(

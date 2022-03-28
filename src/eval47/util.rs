@@ -82,3 +82,39 @@ pub fn clone_signature(signature: &Signature) -> Signature {
         ret_option: signature.ret_option.iter().map(|x| *x).collect()
     }
 }
+
+pub struct Guard {
+    inner: String,
+    cancelled: bool
+}
+
+impl Guard {
+    pub fn new(inner: String) -> Self {
+        Guard {
+            inner,
+            cancelled: false
+        }
+    }
+
+    pub fn cancel(&mut self) {
+        self.cancelled = true;
+    }
+}
+
+impl Drop for Guard {
+    fn drop(&mut self) {
+        if !self.cancelled {
+            eprintln!(".. when performing: {}", self.inner);
+        }
+    }
+}
+
+#[macro_export]
+macro_rules! guard {
+    ($text:expr) => {
+        Guard::new($name.into())
+    };
+    ($fmt:expr, $($arg:tt)*) => {
+        Guard::new(format!($fmt, $($arg)*))
+    }
+}

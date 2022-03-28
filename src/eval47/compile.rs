@@ -17,6 +17,8 @@ use crate::eval47::commons::{CompiledFunction, CompiledProgram, FFIAsyncFunction
 use crate::eval47::data_map::GValue;
 use crate::eval47::min_scope_analysis::AnalyseResult;
 use crate::eval47::util::{bitcast_i64_usize, MantisGod};
+use crate::guard;
+use crate::eval47::util::Guard;
 use crate::value::Value;
 
 pub struct CompileContext {
@@ -33,7 +35,7 @@ pub struct CompileContext {
     compiling_function_chain: Vec<CompilingFunction>,
     compiling_function_names: Vec<String>,
 
-    func_queue: VecDeque<Handle<Function>>
+    func_queue: VecDeque<(Vec<String>, Handle<Function>)>
 }
 
 pub struct CompileResult {
@@ -105,10 +107,11 @@ impl CompileContext {
 
         for piece in ast {
             if let TopLevel::Function(func) = piece {
-                self.func_queue.push_back(func.clone());
+                self.func_queue.push_back((self.compiling_function_names.clone(), func.clone()));
             }
         }
-        while let Some(func_handle) = self.func_queue.pop_front() {
+        while let Some((function_names, func_handle)) = self.func_queue.pop_front() {
+            self.compiling_function_names = function_names;
             self.compile_function(func_handle, analyse_result);
         }
 
@@ -154,6 +157,15 @@ impl CompilingFunction {
 }
 
 impl CompileContext {
+    fn format_function_chain(&self) -> String {
+        let mut chain = String::new();
+        for name in self.compiling_function_names.iter() {
+            chain.push_str(name);
+            chain.push_str("::");
+        }
+        chain
+    }
+
     fn compile_function(&mut self, func: Handle<Function>, analyse_result: &AnalyseResult) {
         let func_id: i64 = analyse_result.data_collection
             .get(func.as_ref(), "FunctionID")
@@ -168,6 +180,14 @@ impl CompileContext {
             .clone()
             .try_into()
             .unwrap();
+
+        let mut g = guard!(
+            "compile function `{}{}` (func_id = {})",
+            self.format_function_chain(),
+            func_name,
+            func_id
+        );
+
         let param_var_ids: Vec<GValue> = analyse_result.data_collection
             .get(func.as_ref(), "ParamVarIDs")
             .unwrap()
@@ -219,6 +239,8 @@ impl CompileContext {
             param_tyck_info: boxed_slice![],
             exc_handlers: None
         });
+
+        g.cancel();
     }
 
     fn compile_stmt_list(
@@ -241,7 +263,10 @@ impl CompileContext {
     ) -> Option<usize> {
         match stmt {
             TopLevel::Function(func_handle) => {
-                self.func_queue.push_back(func_handle.clone());
+                self.func_queue.push_back((
+                    self.compiling_function_names.clone(),
+                    func_handle.clone()
+                ));
                 None
             },
             TopLevel::Bind(_, expr) => {
@@ -342,6 +367,7 @@ impl CompileContext {
         analyse_result: &AnalyseResult,
         tgt: Option<usize>
     ) -> usize {
+        let mut g = guard!("compile variable `{}`", var.0.as_str());
         let var_ref: Vec<GValue> = analyse_result.data_collection.get(var.as_ref(), "Ref")
             .unwrap()
             .clone()
@@ -357,6 +383,7 @@ impl CompileContext {
                     var_id = self.compiling_function_chain.last().unwrap()
                         .translate_local_id_to_address(var_id);
                 }
+                g.cancel();
 
                 if let Some(tgt) = tgt {
                     self.code.push(Insc::Move(var_id, tgt));
@@ -374,6 +401,7 @@ impl CompileContext {
                 } else {
                     self.compiling_function_chain.last_mut().unwrap().allocate_temp()
                 };
+                g.cancel();
 
                 self.convert_func_to_closure(func_id, analyse_result, tgt);
                 tgt
@@ -390,6 +418,7 @@ impl CompileContext {
         var: Handle<Symbol>,
         analyse_result: &AnalyseResult,
     ) -> MantisGod<usize, usize, (bool, usize)> {
+        let mut g = guard!("compile variable `{}` for function call", var.0.as_str());
         let var_ref: Vec<GValue> = analyse_result.data_collection.get(var.as_ref(), "Ref")
             .unwrap()
             .clone()
@@ -400,6 +429,7 @@ impl CompileContext {
                 let is_capture: bool = var_ref[1].clone().try_into().unwrap();
                 let var_id = var_ref[2].clone().try_into().unwrap();
                 let var_id = bitcast_i64_usize(var_id);
+                g.cancel();
                 MantisGod::Left(if is_capture {
                     var_id
                 } else {
@@ -410,12 +440,14 @@ impl CompileContext {
             "Function" => {
                 let func_id = var_ref[1].clone().try_into().unwrap();
                 let func_id = bitcast_i64_usize(func_id);
+                g.cancel();
                 MantisGod::Middle(func_id)
             },
             "FFI" => {
                 let is_async = var_ref[1].clone().try_into().unwrap();
                 let ffi_func_id = var_ref[2].clone().try_into().unwrap();
                 let ffi_func_id = bitcast_i64_usize(ffi_func_id);
+                g.cancel();
                 MantisGod::Right((is_async, ffi_func_id))
             },
             _ => unreachable!()
@@ -428,7 +460,12 @@ impl CompileContext {
         analyse_result: &AnalyseResult,
         tgt: Option<usize>
     ) -> usize {
-        self.func_queue.push_back(lambda.clone());
+        let mut g = guard!(
+            "compile lambda `{}@{:x}`",
+            self.format_function_chain(),
+            lambda.as_ref() as *const _ as usize
+        );
+        self.func_queue.push_back((self.compiling_function_names.clone(), lambda.clone()));
 
         let func_id = analyse_result.data_collection.get(lambda.as_ref(), "FunctionID")
             .unwrap()
@@ -443,6 +480,7 @@ impl CompileContext {
             self.compiling_function_chain.last_mut().unwrap().allocate_temp()
         };
         self.convert_func_to_closure(func_id, analyse_result, tgt);
+        g.cancel();
         tgt
     }
 
@@ -452,7 +490,9 @@ impl CompileContext {
         analyse_result: &AnalyseResult,
         tgt: Option<usize>
     ) -> usize {
+        let mut g = guard!("compile let @{:x}", let_item.as_ref() as *const _ as usize);
         for bind in let_item.binds.iter() {
+            let mut g = guard!("compile let bind `{}`", bind.0.0.as_str());
             let var_id = analyse_result.data_collection.get(bind.0.as_ref(), "VarID")
                 .unwrap()
                 .clone()
@@ -462,6 +502,7 @@ impl CompileContext {
             let var_id = self.compiling_function_chain.last().unwrap()
                 .translate_local_id_to_address(var_id);
             self.compile_expr(&bind.1, analyse_result, Some(var_id));
+            g.cancel();
         }
 
         let body_ret = self.compile_stmt_list(&let_item.body, analyse_result);
@@ -476,6 +517,7 @@ impl CompileContext {
         } else {
             self.code.push(Insc::MakeBoolConst(false, tgt));
         }
+        g.cancel();
         tgt
     }
 
@@ -485,6 +527,7 @@ impl CompileContext {
         analyse_result: &AnalyseResult,
         tgt: Option<usize>
     ) -> usize {
+        let mut g = guard!("compile set var `{}`", set.name.0.as_str());
         let var_id = analyse_result.data_collection.get(set.as_ref(), "VarID")
             .unwrap()
             .clone()
@@ -495,6 +538,7 @@ impl CompileContext {
             .translate_local_id_to_address(var_id);
         self.compile_expr(&set.value, analyse_result, Some(var_id));
 
+        g.cancel();
         if let Some(tgt) = tgt {
             self.code.push(Insc::Move(var_id, tgt));
             tgt
@@ -509,6 +553,8 @@ impl CompileContext {
         analyse_result: &AnalyseResult,
         tgt: Option<usize>
     ) -> usize {
+        let mut g = guard!("compile cond @{:x}", cond.as_ref() as *const _ as usize);
+
         let tgt = if let Some(tgt) = tgt { tgt } else {
             self.compiling_function_chain.last_mut().unwrap().allocate_temp()
         };
@@ -558,6 +604,8 @@ impl CompileContext {
                 *dest = code_len;
             }
         }
+
+        g.cancel();
         tgt
     }
 
@@ -567,6 +615,8 @@ impl CompileContext {
         analyse_result: &AnalyseResult,
         tgt: Option<usize>
     ) -> usize {
+        let mut g = guard!("compile call @{:x}", call.as_ref() as *const _ as usize);
+
         let tgt = if let Some(tgt) = tgt { tgt } else {
             self.compiling_function_chain.last_mut().unwrap().allocate_temp()
         };
@@ -578,6 +628,7 @@ impl CompileContext {
                 analyse_result,
                 Some(tgt)
             ) {
+                g.cancel();
                 return result;
             }
         }
@@ -589,6 +640,7 @@ impl CompileContext {
 
         if let Expr::Variable(sym) = &call.0[0] {
             if let Some(result) = self.try_compile_builtin(sym.0.as_str(), &args, Some(tgt)) {
+                g.cancel();
                 return result;
             }
         }
@@ -625,7 +677,10 @@ impl CompileContext {
                 let arg_count = p_args.len();
 
                 // TODO support va-args
-                assert_eq!(arg_count, call.0.len() - 1);
+                assert_eq!(arg_count, call.0.len() - 1,
+                           "expected {} args, got {}",
+                           arg_count, call.0.len() - 1);
+
                 self.code.push(Insc::Call(func_id, unsafe {
                     self.slice_arena.unsafe_make(&args)
                 }, unsafe {
@@ -643,6 +698,10 @@ impl CompileContext {
                     (signature.param_options.len(), signature)
                 };
 
+                assert_eq!(arg_count, call.0.len() - 1,
+                           "expected {} args, got {}",
+                           arg_count, call.0.len() - 1);
+
                 for i in 0..arg_count {
                     // TODO: re-enable after Pr47 fixes the issues
                     self.code.push(Insc::TypeCheck(args[i], unsafe {
@@ -654,7 +713,6 @@ impl CompileContext {
                     }));
                 }
 
-                assert_eq!(arg_count, call.0.len() - 1);
                 if !is_async {
                     self.code.push(Insc::FFICallRtlc(
                         ffi_func_id,
@@ -675,6 +733,7 @@ impl CompileContext {
             }
         }
 
+        g.cancel();
         tgt
     }
 
@@ -690,12 +749,12 @@ impl CompileContext {
 
         Some(match op {
             "=" => {
-                assert_eq!(args.len(), 2);
+                assert_eq!(args.len(), 2, "`=` expects 2 arguments");
                 self.code.push(Insc::EqAny(args[0], args[1], tgt));
                 tgt
             },
             "+" => {
-                assert!(args.len() >= 2);
+                assert!(args.len() >= 2, "`+` expects at least 2 arguments");
                 if args.len() == 2 {
                     self.code.push(Insc::AddAny(args[0], args[1], tgt));
                 } else {
@@ -707,12 +766,12 @@ impl CompileContext {
                 tgt
             },
             "-" => {
-                assert_eq!(args.len(), 2);
+                assert_eq!(args.len(), 2, "`-` expects 2 arguments");
                 self.code.push(Insc::SubAny(args[0], args[1], tgt));
                 tgt
             },
             "*" => {
-                assert!(args.len() >= 2);
+                assert!(args.len() >= 2, "`*` expects at least 2 arguments");
                 if args.len() == 2 {
                     self.code.push(Insc::MulAny(args[0], args[1], tgt));
                 } else {
@@ -724,47 +783,47 @@ impl CompileContext {
                 tgt
             },
             "/" => {
-                assert_eq!(args.len(), 2);
+                assert_eq!(args.len(), 2, "`/` expects 2 arguments");
                 self.code.push(Insc::DivAny(args[0], args[1], tgt));
                 tgt
             },
             "%" => {
-                assert_eq!(args.len(), 2);
+                assert_eq!(args.len(), 2, "`%` expects 2 arguments");
                 self.code.push(Insc::ModAny(args[0], args[1], tgt));
                 tgt
             },
             ">" => {
-                assert_eq!(args.len(), 2);
+                assert_eq!(args.len(), 2, "`>` expects 2 arguments");
                 self.code.push(Insc::GtAny(args[0], args[1], tgt));
                 tgt
             },
             "<" => {
-                assert_eq!(args.len(), 2);
+                assert_eq!(args.len(), 2, "`<` expects 2 arguments");
                 self.code.push(Insc::LtAny(args[0], args[1], tgt));
                 tgt
             },
             ">=" => {
-                assert_eq!(args.len(), 2);
+                assert_eq!(args.len(), 2, "`>=` expects 2 arguments");
                 self.code.push(Insc::GeAny(args[0], args[1], tgt));
                 tgt
             },
             "<=" => {
-                assert_eq!(args.len(), 2);
+                assert_eq!(args.len(), 2, "`<=` expects 2 arguments");
                 self.code.push(Insc::LeAny(args[0], args[1], tgt));
                 tgt
             },
             "!=" => {
-                assert_eq!(args.len(), 2);
+                assert_eq!(args.len(), 2, "`!=` expects 2 arguments");
                 self.code.push(Insc::NeAny(args[0], args[1], tgt));
                 tgt
             },
             "not" => {
-                assert_eq!(args.len(), 1);
+                assert_eq!(args.len(), 1, "`not` expects 1 argument");
                 self.code.push(Insc::NotAny(args[0], tgt));
                 tgt
             },
             "raise" => {
-                assert_eq!(args.len(), 1);
+                assert_eq!(args.len(), 1, "`raise` expects 1 argument");
                 self.code.push(Insc::Raise(args[0]));
                 tgt
             },
@@ -789,7 +848,7 @@ impl CompileContext {
 
         Some(match op {
             "and" => {
-                assert!(args.len() >= 2);
+                assert!(args.len() >= 2, "`and` requires at least two arguments");
                 let mut jump_to_fail_idx = Vec::new();
                 for arg in args {
                     let tmp = self.compile_expr(arg, analyse_result, None);
@@ -819,7 +878,7 @@ impl CompileContext {
                 tgt
             },
             "or" => {
-                assert!(args.len() >= 2);
+                assert!(args.len() >= 2, "`or` requires at least two arguments");
                 let mut jump_to_next_idx = Vec::new();
                 for arg in args {
                     let tmp = self.compile_expr(arg, analyse_result, None);
