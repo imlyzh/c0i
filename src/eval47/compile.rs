@@ -572,7 +572,6 @@ impl CompileContext {
         };
 
         if let Expr::Variable(sym) = &call.0[0] {
-            dbg!(sym.0.as_str());
             if let Some(result) = self.try_compile_short_circuit_builtin(
                 sym.0.as_str(),
                 &call.0[1..],
