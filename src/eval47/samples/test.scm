@@ -13,10 +13,13 @@
 )
 
 (define (list-ref list n)
-    (cond ((>= n (list-length list)) (raise "fuck you"))
-          ((= n 0) (car list))
-          (else (list-ref (cdr list) (- n 1)))
+    (define (list-ref-impl list n)
+        (cond ((= n 0) (car list))
+              (else (list-ref-impl (cdr list) (- n 1)))
+        )
     )
+    (cond ((>= n (list-length list)) (raise "fuck you"))
+          (else (list-ref-impl list n)))
 )
 
 (define (test-bool bool-value)
@@ -26,7 +29,7 @@
 )
 
 (define (application-start)
-    (list-ref '(1 2 3) 3)
+    (dbg-int (list-ref '(1 2 3) 2))
 
     (test-bool (and false (print-str-and-ret "test0" true)))
     (test-bool (and true (print-str-and-ret "test1" true)))
