@@ -9,7 +9,7 @@ use sexpr_ir::syntax::sexpr::parse;
 use xjbutil::std_ext::ResultExt;
 use xjbutil::unchecked::UncheckedSendSync;
 use c0ilib::ast::TopLevel;
-use c0ilib::eval47::builtins::DBG_INT_BIND;
+use c0ilib::eval47::builtins::{DBG_INT_BIND, DBG_STR_BIND};
 use c0ilib::eval47::commons::CompiledProgram;
 use c0ilib::eval47::compile::CompileContext;
 use c0ilib::eval47::min_scope_analysis::AnalyseContext;
@@ -37,15 +37,25 @@ async fn run_program(
     eprintln!("Program terminated, elapsed time = {}",
               (end_time - start_time).as_millis());
 
-    result.unwrap_no_debug();
+    if let Err(e) = result {
+        eprintln!("An exception occurred when executing program:");
+        for frame in e.trace.iter() {
+            eprintln!(".. func_id = {}, insc_ptr = {}", frame.func_id, frame.insc_ptr);
+        }
+    }
 }
 
 fn main() {
     let args = env::args().skip(1).collect::<Vec<_>>();
 
+    let use_define_as_defun = !args.contains(&"--explicit-defun".to_string());
+
     let mut top_levels = Vec::new();
     eprintln!("Transforming builtins");
-    let builtins = parse(BUILTINS, Arc::new("builtins".to_string())).unwrap();
+    let builtins = parse(
+        &BUILTINS.replace("(define (", "(defun  ("),
+        Arc::new("builtins".to_string())
+    ).expect("failed parsing builtins");
     for piece in builtins {
         top_levels.push(TopLevel::from_sexpr(&piece).unwrap());
     }
@@ -56,7 +66,15 @@ fn main() {
 
         eprintln!("Transforming source file `{}`", arg);
         let file_content = read_to_string(arg).unwrap();
-        let sexprs = parse(&file_content, Arc::new(arg.to_string())).unwrap();
+        let sexprs = if use_define_as_defun {
+            parse(
+                &file_content.replace("(define (", "(defun  (")
+                    .replace("(define(", "(defun ("),
+                Arc::new(arg.to_string())
+            )
+        } else {
+            parse(&file_content, Arc::new(arg.to_string()))
+        }.expect("failed parsing source file");
         for piece in sexprs {
             top_levels.push(
                 TopLevel::from_sexpr(&piece)
@@ -68,6 +86,7 @@ fn main() {
     eprintln!("Performing analyse");
     let mut context = AnalyseContext::new();
     context.register_ffi("dbg-int", &DBG_INT_BIND);
+    context.register_ffi("dbg-str", &DBG_STR_BIND);
     let analyse_result = context.min_scope_analyse(&top_levels);
 
     if args.contains(&"--only-analyse".to_string()) {

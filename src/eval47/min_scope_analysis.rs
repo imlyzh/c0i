@@ -20,6 +20,14 @@ pub const BUILTIN_OPS: &'static [&'static str] = &[
     "*",
     "/",
     "%",
+    "and",
+    "or",
+    "not",
+    ">",
+    "<",
+    ">=",
+    "<=",
+    "!=",
     "unimplemented",
     "vector",
     "vector-length",
@@ -237,12 +245,12 @@ impl AnalyseContext {
                 let const_id = result.global_consts.len();
                 result.global_consts.push(GValue::String(s.as_str().to_string()));
                 result.data_collection.insert(
-                    value,
+                    s.as_ref(),
                     "ConstID",
                     bitcast_usize_i64(const_id)
                 );
                 result.data_collection.insert(
-                    value,
+                    s.as_ref(),
                     "ConstValue",
                     s.as_str()
                 );

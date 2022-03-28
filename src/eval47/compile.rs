@@ -5,6 +5,7 @@ use std::ptr::NonNull;
 use pr47::builtins::closure::Closure;
 use pr47::data::generic::GenericTypeVT;
 use pr47::data::tyck::{TyckInfo, TyckInfoPool};
+use pr47::data::wrapper::OwnershipInfo;
 use pr47::vm::al31f::insc::Insc;
 use sexpr_ir::gast::Handle;
 use sexpr_ir::gast::symbol::Symbol;
@@ -85,6 +86,22 @@ impl CompileContext {
         analyse_result: &AnalyseResult
     ) -> CompileResult {
         eprintln!("Compiling to bytecode");
+        for global_const in analyse_result.global_consts.iter() {
+            let value = match global_const {
+                GValue::Nil => pr47::data::Value::new_bool(false),
+                GValue::Bool(b) => pr47::data::Value::new_bool(*b),
+                GValue::Int(i) => pr47::data::Value::new_int(*i),
+                GValue::Float(f) => pr47::data::Value::new_float(*f),
+                GValue::String(s) => unsafe {
+                    let v = pr47::data::Value::new_owned(s.clone());
+                    v.set_ownership_info(OwnershipInfo::GlobalConst);
+                    v
+                },
+                _ => unreachable!()
+            };
+            self.const_pool.push(value);
+        }
+
 
         for piece in ast {
             if let TopLevel::Function(func) = piece {
@@ -188,7 +205,7 @@ impl CompileContext {
         } else {
             let ret_pos = self.compiling_function_chain.last_mut().unwrap()
                 .allocate_temp();
-            self.code.push(Insc::MakeNull(ret_pos));
+            self.code.push(Insc::MakeBoolConst(false, ret_pos));
             self.code.push(Insc::ReturnOne(ret_pos));
         }
 
@@ -283,14 +300,14 @@ impl CompileContext {
         };
 
         match value {
-            Value::Nil => self.code.push(Insc::MakeNull(tgt)),
+            Value::Nil => self.code.push(Insc::MakeBoolConst(false, tgt)),
             Value::Bool(value) => self.code.push(Insc::MakeBoolConst(*value, tgt)),
             Value::Char(value) => self.code.push(Insc::MakeCharConst(*value, tgt)),
             Value::Uint(_) => unreachable!(),
             Value::Int(value) => self.code.push(Insc::MakeIntConst(*value, tgt)),
             Value::Float(value) => self.code.push(Insc::MakeFloatConst(*value, tgt)),
             Value::Str(value) => {
-                let const_id: i64 = analyse_result.data_collection.get(value, "ConstID")
+                let const_id: i64 = analyse_result.data_collection.get(value.as_ref(), "ConstID")
                     .unwrap()
                     .clone()
                     .try_into()
@@ -457,7 +474,7 @@ impl CompileContext {
         if let Some(ret_pos) = body_ret {
             self.code.push(Insc::Move(ret_pos, tgt));
         } else {
-            self.code.push(Insc::MakeNull(tgt));
+            self.code.push(Insc::MakeBoolConst(false, tgt));
         }
         tgt
     }
@@ -553,29 +570,27 @@ impl CompileContext {
         let tgt = if let Some(tgt) = tgt { tgt } else {
             self.compiling_function_chain.last_mut().unwrap().allocate_temp()
         };
+
+        if let Expr::Variable(sym) = &call.0[0] {
+            dbg!(sym.0.as_str());
+            if let Some(result) = self.try_compile_short_circuit_builtin(
+                sym.0.as_str(),
+                &call.0[1..],
+                analyse_result,
+                Some(tgt)
+            ) {
+                return result;
+            }
+        }
+
         let mut args = Vec::new();
         for arg in call.as_ref().0.iter().skip(1) {
             args.push(self.compile_expr(arg, analyse_result, None));
         }
 
         if let Expr::Variable(sym) = &call.0[0] {
-            match sym.0.as_str() {
-                "=" => {
-                    assert_eq!(args.len(), 2);
-                    self.code.push(Insc::EqAny(args[0], args[1], tgt));
-                    return tgt;
-                },
-                "+" => {
-                    assert_eq!(args.len(), 2);
-                    self.code.push(Insc::AddAny(args[0], args[1], tgt));
-                    return tgt;
-                },
-                "-" => {
-                    assert_eq!(args.len(), 2);
-                    self.code.push(Insc::SubAny(args[0], args[1], tgt));
-                    return tgt;
-                },
-                _ => {}
+            if let Some(result) = self.try_compile_builtin(sym.0.as_str(), &args, Some(tgt)) {
+                return result;
             }
         }
 
@@ -662,6 +677,171 @@ impl CompileContext {
         }
 
         tgt
+    }
+
+    fn try_compile_builtin(
+        &mut self,
+        op: &str,
+        args: &[usize],
+        tgt: Option<usize>
+    ) -> Option<usize> {
+        let tgt = if let Some(tgt) = tgt { tgt } else {
+            self.compiling_function_chain.last_mut().unwrap().allocate_temp()
+        };
+
+        Some(match op {
+            "=" => {
+                assert_eq!(args.len(), 2);
+                self.code.push(Insc::EqAny(args[0], args[1], tgt));
+                tgt
+            },
+            "+" => {
+                assert!(args.len() >= 2);
+                if args.len() == 2 {
+                    self.code.push(Insc::AddAny(args[0], args[1], tgt));
+                } else {
+                    self.code.push(Insc::Move(args[0], tgt));
+                    for i in 1..args.len() {
+                        self.code.push(Insc::AddAny(tgt, args[i], tgt));
+                    }
+                }
+                tgt
+            },
+            "-" => {
+                assert_eq!(args.len(), 2);
+                self.code.push(Insc::SubAny(args[0], args[1], tgt));
+                tgt
+            },
+            "*" => {
+                assert!(args.len() >= 2);
+                if args.len() == 2 {
+                    self.code.push(Insc::MulAny(args[0], args[1], tgt));
+                } else {
+                    self.code.push(Insc::Move(args[0], tgt));
+                    for i in 1..args.len() {
+                        self.code.push(Insc::MulAny(tgt, args[i], tgt));
+                    }
+                }
+                tgt
+            },
+            "/" => {
+                assert_eq!(args.len(), 2);
+                self.code.push(Insc::DivAny(args[0], args[1], tgt));
+                tgt
+            },
+            "%" => {
+                assert_eq!(args.len(), 2);
+                self.code.push(Insc::ModAny(args[0], args[1], tgt));
+                tgt
+            },
+            ">" => {
+                assert_eq!(args.len(), 2);
+                self.code.push(Insc::GtAny(args[0], args[1], tgt));
+                tgt
+            },
+            "<" => {
+                assert_eq!(args.len(), 2);
+                self.code.push(Insc::LtAny(args[0], args[1], tgt));
+                tgt
+            },
+            ">=" => {
+                assert_eq!(args.len(), 2);
+                self.code.push(Insc::GeAny(args[0], args[1], tgt));
+                tgt
+            },
+            "<=" => {
+                assert_eq!(args.len(), 2);
+                self.code.push(Insc::LeAny(args[0], args[1], tgt));
+                tgt
+            },
+            "!=" => {
+                assert_eq!(args.len(), 2);
+                self.code.push(Insc::NeAny(args[0], args[1], tgt));
+                tgt
+            },
+            "not" => {
+                assert_eq!(args.len(), 1);
+                self.code.push(Insc::NotAny(args[0], tgt));
+                tgt
+            },
+            _ => return None
+        })
+    }
+
+    fn try_compile_short_circuit_builtin(
+        &mut self,
+        op: &str,
+        args: &[Expr],
+        analyse_result: &AnalyseResult,
+        tgt: Option<usize>
+    ) -> Option<usize> {
+        let tgt = if let Some(tgt) = tgt { tgt } else {
+            self.compiling_function_chain.last_mut().unwrap().allocate_temp()
+        };
+
+        Some(match op {
+            "and" => {
+                assert!(args.len() >= 2);
+                let mut jump_to_fail_idx = Vec::new();
+                for arg in args {
+                    let tmp = self.compile_expr(arg, analyse_result, None);
+                    jump_to_fail_idx.push(self.code.len());
+                    self.code.push(Insc::JumpIfFalse(tmp, 0));
+                }
+                self.code.push(Insc::MakeBoolConst(true, tgt));
+                let jump_to_next_idx = self.code.len();
+                self.code.push(Insc::Jump(0));
+
+                let code_len = self.code.len();
+                for i in 0..args.len() {
+                    if let Insc::JumpIfFalse(_, dest) = &mut self.code[jump_to_fail_idx[i]] {
+                        *dest = code_len;
+                    } else {
+                        unreachable!();
+                    }
+                }
+                self.code.push(Insc::MakeBoolConst(false, tgt));
+                let code_len = self.code.len();
+                if let Insc::Jump(dest) = &mut self.code[jump_to_next_idx] {
+                    *dest = code_len;
+                } else {
+                    unreachable!();
+                }
+
+                tgt
+            },
+            "or" => {
+                assert!(args.len() >= 2);
+                let mut jump_to_next_idx = Vec::new();
+                for arg in args {
+                    let tmp = self.compile_expr(arg, analyse_result, None);
+                    jump_to_next_idx.push(self.code.len());
+                    self.code.push(Insc::JumpIfTrue(tmp, 0));
+                }
+                self.code.push(Insc::MakeBoolConst(false, tgt));
+                let jump_to_fail_idx = self.code.len();
+                self.code.push(Insc::Jump(0));
+
+                let code_len = self.code.len();
+                for i in 0..args.len() {
+                    if let Insc::JumpIfTrue(_, dest) = &mut self.code[jump_to_next_idx[i]] {
+                        *dest = code_len;
+                    } else {
+                        unreachable!();
+                    }
+                }
+                self.code.push(Insc::MakeBoolConst(true, tgt));
+                let code_len = self.code.len();
+                if let Insc::Jump(dest) = &mut self.code[jump_to_fail_idx] {
+                    *dest = code_len;
+                } else {
+                    unreachable!();
+                }
+
+                tgt
+            },
+            _ => return None
+        })
     }
 }
 
