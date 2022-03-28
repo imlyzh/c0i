@@ -176,7 +176,7 @@ impl CompileContext {
         let func_id = bitcast_i64_usize(func_id);
         let func_name: String = analyse_result.data_collection
             .get(func.as_ref(), "FunctionName")
-            .unwrap_or(&GValue::String("(anonymous)".into()))
+            .unwrap_or(&GValue::String("<anonymous>".into()))
             .clone()
             .try_into()
             .unwrap();
@@ -669,6 +669,17 @@ impl CompileContext {
                 }));
             },
             MantisGod::Middle(func_id) => {
+                let func_name: String = analyse_result.functions.get_raw_key(func_id, "FunctionName")
+                    .unwrap()
+                    .clone()
+                    .try_into()
+                    .unwrap();
+                let mut g = guard!(
+                    "compile call to function `{}` (func_id = {})",
+                    func_name,
+                    func_id
+                );
+
                 let p_args: Vec<_> = analyse_result.functions.get_raw_key(func_id, "ParamVarIDs")
                     .unwrap()
                     .clone()
@@ -686,8 +697,22 @@ impl CompileContext {
                 }, unsafe {
                     self.slice_arena.unsafe_make(&[tgt])
                 }));
+                g.cancel();
             },
             MantisGod::Right((is_async, ffi_func_id)) => {
+                let func_name = if !is_async {
+                    analyse_result.ffi_function_map.get(&ffi_func_id).unwrap()
+                } else {
+                    analyse_result.async_ffi_function_map.get(&ffi_func_id).unwrap()
+                };
+
+                let mut g = guard!(
+                    "compile call to {} FFI function `{}` (func_id = {})",
+                    if is_async { "async" } else { "sync" },
+                    func_name,
+                    ffi_func_id
+                );
+
                 let (arg_count, signature) = if !is_async {
                     let signature = self.ffi_funcs[ffi_func_id]
                         .signature(&mut self.tyck_info_pool);
@@ -730,6 +755,8 @@ impl CompileContext {
                         self.slice_arena.unsafe_make(&[tgt])
                     }));
                 }
+
+                g.cancel();
             }
         }
 

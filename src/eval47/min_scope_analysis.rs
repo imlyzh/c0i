@@ -70,6 +70,14 @@ impl AnalyseContext {
 
         self.analyse_global(&mut result, &mut scope_chain, ast);
 
+        for (func_name, (_, _, func_id)) in result.ffi_function_in_use.iter() {
+            result.ffi_function_map.insert(*func_id, func_name.clone());
+        }
+
+        for (func_name, (_, _, func_id)) in result.async_ffi_function_in_use.iter() {
+            result.async_ffi_function_map.insert(*func_id, func_name.clone());
+        }
+
         result
     }
 }
@@ -97,6 +105,16 @@ impl AnalyseContext {
                 );
                 result.data_collection.insert(
                     func_handle.as_ref(),
+                    "FunctionID",
+                    bitcast_usize_i64(func_id)
+                );
+                result.functions.insert_raw_key(
+                    func_id,
+                    "FunctionName",
+                    func_handle.name.as_ref().unwrap().0.as_str(),
+                );
+                result.functions.insert_raw_key(
+                    func_id,
                     "FunctionID",
                     bitcast_usize_i64(func_id)
                 );
@@ -233,6 +251,21 @@ impl AnalyseContext {
                     func.clone().as_ref(),
                     "FunctionID",
                     bitcast_usize_i64(func_id)
+                );
+                result.data_collection.insert(
+                    func.clone().as_ref(),
+                    "FunctionName",
+                    "<anonymous>"
+                );
+                result.functions.insert_raw_key(
+                    func_id,
+                    "FunctionID",
+                    bitcast_usize_i64(func_id)
+                );
+                result.functions.insert_raw_key(
+                    func_id,
+                    "FunctionName",
+                    "<anonymous>"
                 );
                 self.analyse_function(result, scope_chain, func.clone());
             },
@@ -471,6 +504,16 @@ impl AnalyseContext {
                         .0
                         .as_str()
                 );
+                result.functions.insert_raw_key(
+                    func_id,
+                    "FunctionID",
+                    bitcast_usize_i64(func_id)
+                );
+                result.functions.insert_raw_key(
+                    func_id,
+                    "FunctionName",
+                    func_handle.name.as_ref().unwrap().0.as_str()
+                );
             }
         }
 
@@ -488,7 +531,9 @@ pub struct AnalyseResult<'a> {
     pub functions: DataCollection,
     pub global_consts: Vec<GValue>,
     pub ffi_function_in_use: HashMap<String, (FFIFunction, Signature, usize)>,
+    pub ffi_function_map: HashMap<usize, String>,
     pub async_ffi_function_in_use: HashMap<String, (FFIAsyncFunction, Signature, usize)>,
+    pub async_ffi_function_map: HashMap<usize, String>,
     _phantom: PhantomData<&'a ()>
 }
 
@@ -500,7 +545,9 @@ impl<'a> AnalyseResult<'a> {
             functions: DataCollection::new(),
             global_consts: Vec::new(),
             ffi_function_in_use: HashMap::new(),
+            ffi_function_map: HashMap::new(),
             async_ffi_function_in_use: HashMap::new(),
+            async_ffi_function_map: HashMap::new(),
             _phantom: PhantomData
         }
     }
