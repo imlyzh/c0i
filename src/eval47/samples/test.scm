@@ -31,10 +31,10 @@
 (define (application-start)
     (dbg-int (list-ref '(1 2 3) 2))
 
-    (test-bool (and false (print-str-and-ret "test0" true)))
-    (test-bool (and true (print-str-and-ret "test1" true)))
-    (test-bool (or true (print-str-and-ret "test2" false)))
-    (test-bool (or false (print-str-and-ret "test3" true)))
+    (test-bool (and false (print-str-and-ret "this should not be printed" true)))
+    (test-bool (and true (print-str-and-ret "this should be printed" true)))
+    (test-bool (or true (print-str-and-ret "this should not be printed" false)))
+    (test-bool (or false (print-str-and-ret "this should be printed [2]" true)))
 )
 
 (define (print-str-and-ret str val)

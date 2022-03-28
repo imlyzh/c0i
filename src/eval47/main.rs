@@ -119,10 +119,12 @@ fn main() {
     );
     let result = compile_context.compile(&top_levels, &analyse_result);
 
-    eprintln!("\nCompiled bytecode: ");
-    unsafe {
-        for (idx, insc) in result.cp.code.iter().enumerate() {
-            eprintln!(" {}) {}", idx, insc.unsafe_to_string());
+    if args.contains(&"--dump-bytecode".to_string()) {
+        eprintln!("\nCompiled bytecode: ");
+        unsafe {
+            for (idx, insc) in result.cp.code.iter().enumerate() {
+                eprintln!(" {}) {}", idx, insc.unsafe_to_string());
+            }
         }
     }
     eprintln!("\nStarting program\n");
