@@ -1,4 +1,5 @@
 use std::mem::transmute;
+use sexpr_ir::gast::symbol::Location;
 
 use crate::eval47::commons::Signature;
 
@@ -84,13 +85,15 @@ pub fn clone_signature(signature: &Signature) -> Signature {
 }
 
 pub struct Guard {
+    pos: Option<Location>,
     inner: String,
     cancelled: bool
 }
 
 impl Guard {
-    pub fn new(inner: String) -> Self {
+    pub fn new(pos: Option<Location>, inner: String) -> Self {
         Guard {
+            pos,
             inner,
             cancelled: false
         }
@@ -104,7 +107,17 @@ impl Guard {
 impl Drop for Guard {
     fn drop(&mut self) {
         if !self.cancelled {
-            eprintln!(".. when performing: {}", self.inner);
+            if let Some(pos) = self.pos.as_ref() {
+                eprintln!(
+                    ".. at file \"{}\", line {}, column {}: when performing: {}",
+                    pos.path.as_str(),
+                    pos.line,
+                    pos.colum,
+                    self.inner
+                );
+            } else {
+                eprintln!(".. when performing: {}", self.inner);
+            }
         }
     }
 }
@@ -112,9 +125,19 @@ impl Drop for Guard {
 #[macro_export]
 macro_rules! guard {
     ($text:expr) => {
-        Guard::new($name.into())
+        Guard::new(None, $name.into())
     };
     ($fmt:expr, $($arg:tt)*) => {
-        Guard::new(format!($fmt, $($arg)*))
+        Guard::new(None, format!($fmt, $($arg)*))
+    }
+}
+
+#[macro_export]
+macro_rules! guard2 {
+    ($pos:expr, $text:expr) => {
+        Guard::new(Some($pos.clone()), $name.into())
+    };
+    ($pos:expr, $fmt:expr, $($arg:tt)*) => {
+        Guard::new(Some($pos.clone()), format!($fmt, $($arg)*))
     }
 }

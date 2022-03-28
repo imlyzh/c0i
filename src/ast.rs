@@ -29,6 +29,20 @@ pub enum Expr {
     FunctionCall(Handle<Call>)
 }
 
+impl Expr {
+    pub fn location(&self) -> Option<&Location> {
+        match self {
+            Expr::Value(_) => None,
+            Expr::Variable(var) => Some(&var.1),
+            Expr::Lambda(lambda) => Some(&lambda.pos),
+            Expr::Let(let_item) => Some(&let_item.pos),
+            Expr::Set(set) => Some(&set.pos),
+            Expr::Cond(cond) => Some(&cond.pos),
+            Expr::FunctionCall(call) => call.0[0].location()
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Let {
     pub binds: Vec<(Handle<Symbol>, Expr)>,

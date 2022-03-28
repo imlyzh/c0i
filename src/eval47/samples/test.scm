@@ -7,7 +7,7 @@
 (define (list-ref list n)
   (define (list-ref-impl list n)
     (cond ((= n 0) (car list))
-          (else (list-ref-impl (cdr list) (- n 1)))))
+          (else (list-ref-impl (cdr list) list (- n 1)))))
   (cond ((>= n (list-length list)) (raise "IndexOutOfBounds"))
         (else (list-ref-impl list n))))
 

@@ -11,7 +11,7 @@ use crate::ast::{Call, Cond, Expr, Function, Let, Set, TopLevel};
 use crate::eval47::commons::{FFIAsyncFunction, FFIFunction, Signature};
 use crate::eval47::data_map::{DataCollection, GValue};
 use crate::eval47::util::{bitcast_i64_usize, bitcast_usize_i64, clone_signature, Guard, MantisGod};
-use crate::guard;
+use crate::{guard, guard2};
 use crate::value::Value;
 
 pub const BUILTIN_OPS: &'static [&'static str] = &[
@@ -160,7 +160,8 @@ impl AnalyseContext {
             }
         }
 
-        let mut g = guard!(
+        let mut g = guard2!(
+            func.as_ref().pos,
             "analyse function `{}` (func_id = {})",
             func.as_ref().name.as_ref().map_or("<anonymous>", |x| x.0.as_str()),
             func_id
@@ -316,7 +317,11 @@ impl AnalyseContext {
         scope_chain: &mut Option<Box<Scope>>,
         var: Handle<Symbol>
     ) {
-        let mut g = guard!("analyse variable ref `{}`", var.0.as_str());
+        let mut g = guard2!(
+            var.1,
+            "analyse variable ref `{}`",
+            var.0.as_str()
+        );
 
         if BUILTIN_OPS.contains(&var.0.as_str()) {
             g.cancel();
@@ -375,7 +380,11 @@ impl AnalyseContext {
         scope_chain: &mut Option<Box<Scope>>,
         let_item: Handle<Let>
     ) {
-        let mut g = guard!("analyse let @{:x}", let_item.as_ref() as *const _ as usize);
+        let mut g = guard2!(
+            let_item.as_ref().pos,
+            "analyse let @{:x}",
+            let_item.as_ref() as *const _ as usize,
+        );
         *scope_chain = Some(Box::new(Scope::new(scope_chain.take())));
         for bind in let_item.binds.iter() {
             let mut g = guard!("analyse let binding item `{}`", bind.0.0.as_str());
@@ -411,7 +420,11 @@ impl AnalyseContext {
         scope_chain: &mut Option<Box<Scope>>,
         set: Handle<Set>
     ) {
-        let mut g = guard!("analyse set `{}`", set.name.0.as_str());
+        let mut g = guard2!(
+            set.pos,
+            "analyse set `{}`",
+            set.name.0.as_str(),
+        );
         if BUILTIN_OPS.contains(&set.name.0.as_str()) {
             panic!("should not re-define builtin op");
         }
@@ -448,7 +461,11 @@ impl AnalyseContext {
         scope_chain: &mut Option<Box<Scope>>,
         cond: Handle<Cond>
     ) {
-        let mut g = guard!("analyse cond @{:x}", cond.as_ref() as *const _ as usize);
+        let mut g = guard2!(
+            cond.pos,
+            "analyse cond @{:x}",
+            cond.as_ref() as *const _ as usize
+        );
         for pair in cond.pairs.iter() {
             self.analyse_expr(result, scope_chain, &pair.0);
             self.analyse_expr(result, scope_chain, &pair.1);

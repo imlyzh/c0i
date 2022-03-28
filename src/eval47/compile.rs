@@ -17,7 +17,7 @@ use crate::eval47::commons::{CompiledFunction, CompiledProgram, FFIAsyncFunction
 use crate::eval47::data_map::GValue;
 use crate::eval47::min_scope_analysis::AnalyseResult;
 use crate::eval47::util::{bitcast_i64_usize, MantisGod};
-use crate::guard;
+use crate::{guard, guard2};
 use crate::eval47::util::Guard;
 use crate::value::Value;
 
@@ -181,7 +181,8 @@ impl CompileContext {
             .try_into()
             .unwrap();
 
-        let mut g = guard!(
+        let mut g = guard2!(
+            func.pos,
             "compile function `{}{}` (func_id = {})",
             self.format_function_chain(),
             func_name,
@@ -367,7 +368,11 @@ impl CompileContext {
         analyse_result: &AnalyseResult,
         tgt: Option<usize>
     ) -> usize {
-        let mut g = guard!("compile variable `{}`", var.0.as_str());
+        let mut g = guard2!(
+            var.1,
+            "compile variable `{}`",
+            var.0.as_str()
+        );
         let var_ref: Vec<GValue> = analyse_result.data_collection.get(var.as_ref(), "Ref")
             .unwrap()
             .clone()
@@ -418,7 +423,11 @@ impl CompileContext {
         var: Handle<Symbol>,
         analyse_result: &AnalyseResult,
     ) -> MantisGod<usize, usize, (bool, usize)> {
-        let mut g = guard!("compile variable `{}` for function call", var.0.as_str());
+        let mut g = guard2!(
+            var.1,
+            "compile variable `{}` for function call",
+            var.0.as_str()
+        );
         let var_ref: Vec<GValue> = analyse_result.data_collection.get(var.as_ref(), "Ref")
             .unwrap()
             .clone()
@@ -460,7 +469,8 @@ impl CompileContext {
         analyse_result: &AnalyseResult,
         tgt: Option<usize>
     ) -> usize {
-        let mut g = guard!(
+        let mut g = guard2!(
+            lambda.pos,
             "compile lambda `{}@{:x}`",
             self.format_function_chain(),
             lambda.as_ref() as *const _ as usize
@@ -490,9 +500,17 @@ impl CompileContext {
         analyse_result: &AnalyseResult,
         tgt: Option<usize>
     ) -> usize {
-        let mut g = guard!("compile let @{:x}", let_item.as_ref() as *const _ as usize);
+        let mut g = guard2!(
+            let_item.pos,
+            "compile let @{:x}",
+            let_item.as_ref() as *const _ as usize
+        );
         for bind in let_item.binds.iter() {
-            let mut g = guard!("compile let bind `{}`", bind.0.0.as_str());
+            let mut g = guard2!(
+                bind.0.1,
+                "compile let bind `{}`",
+                bind.0.0.as_str()
+            );
             let var_id = analyse_result.data_collection.get(bind.0.as_ref(), "VarID")
                 .unwrap()
                 .clone()
@@ -527,7 +545,11 @@ impl CompileContext {
         analyse_result: &AnalyseResult,
         tgt: Option<usize>
     ) -> usize {
-        let mut g = guard!("compile set var `{}`", set.name.0.as_str());
+        let mut g = guard2!(
+            set.pos,
+            "compile set var `{}`",
+            set.name.0.as_str()
+        );
         let var_id = analyse_result.data_collection.get(set.as_ref(), "VarID")
             .unwrap()
             .clone()
@@ -553,7 +575,11 @@ impl CompileContext {
         analyse_result: &AnalyseResult,
         tgt: Option<usize>
     ) -> usize {
-        let mut g = guard!("compile cond @{:x}", cond.as_ref() as *const _ as usize);
+        let mut g = guard2!(
+            cond.pos,
+            "compile cond @{:x}",
+            cond.as_ref() as *const _ as usize
+        );
 
         let tgt = if let Some(tgt) = tgt { tgt } else {
             self.compiling_function_chain.last_mut().unwrap().allocate_temp()
@@ -615,7 +641,15 @@ impl CompileContext {
         analyse_result: &AnalyseResult,
         tgt: Option<usize>
     ) -> usize {
-        let mut g = guard!("compile call @{:x}", call.as_ref() as *const _ as usize);
+        let mut g = if let Some(pos) = call.0[0].location() {
+            guard2!(
+                pos,
+                "compile call @{:x}",
+                call.as_ref() as *const _ as usize
+            )
+        } else {
+            guard!("compile call @{:x}", call.as_ref() as *const _ as usize)
+        };
 
         let tgt = if let Some(tgt) = tgt { tgt } else {
             self.compiling_function_chain.last_mut().unwrap().allocate_temp()
