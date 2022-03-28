@@ -112,16 +112,16 @@ impl Eval for Let {
             }
         }
         let env = env.new_level(this_level);
-        if self.body.is_empty() {
+        if self.bodys.is_empty() {
             Ok(Value::Nil)
-        } else if self.body.len() == 1 {
-            self.body.first().unwrap().eval(&env)
+        } else if self.bodys.len() == 1 {
+            self.bodys.first().unwrap().eval(&env)
             .map_err(|x| CError::Positional(
                 self.pos.clone(),
                 Handle::new(x)))
         } else {
-            let body_end = self.body.last().unwrap();
-            let bodys = &self.body[..self.body.len()-1];
+            let body_end = self.bodys.last().unwrap();
+            let bodys = &self.bodys[..self.bodys.len()-1];
             for i in bodys {
                 i.eval(&env)
                 .map_err(|x| CError::Positional(

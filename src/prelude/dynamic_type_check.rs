@@ -14,7 +14,7 @@ macro_rules! impl_native_is_type {
     ($name:ident, $fun:ident) => {
         fn $name(args: Vec<Value>) -> CResult {
             if args.len() != 1 {
-                return Err(CError::ArgsNotMatching(1, args.len()));
+                return Err(CError::PrarmsIsNotMatching(1, args.len()));
             }
             Ok(Value::Bool(args.get(0).unwrap().$fun()))
         }
@@ -35,7 +35,7 @@ impl_native_is_type!(native_is_vec, is_vec);
 impl_native_is_type!(native_is_callable, is_callable);
 
 
-impl_wrap!(IS_NIL_WRAP      , IS_NIL_NAME       , native_is_nil     , "null?"       , &LOCATION);
+impl_wrap!(IS_NIL_WRAP      , IS_NIL_NAME       , native_is_nil     , "null?"        , &LOCATION);
 impl_wrap!(IS_CHAR_WRAP     , IS_CHAR_NAME      , native_is_char    , "char?"       , &LOCATION);
 impl_wrap!(IS_BOOL_WRAP     , IS_BOOL_NAME      , native_is_bool    , "bool?"       , &LOCATION);
 impl_wrap!(IS_INT_WRAP      , IS_INT_NAME       , native_is_int     , "int?"        , &LOCATION);

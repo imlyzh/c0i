@@ -19,7 +19,7 @@ pub enum CError {
     CondIsNotBoolean(Value),
     CondIsNotMatching,
     // CaptureVariableError(Handle<Symbol>),
-    ArgsNotMatching(usize, usize),
+    PrarmsIsNotMatching(usize, usize),
     TypeError((), Value),
     // MathError,
     ZeroDivisionError,
@@ -42,8 +42,8 @@ impl Display for CError {
             CError::ValueIsNotCallable(e) => writeln!(f, "ValueIsNotCallable: {}.", e),
             CError::CondIsNotBoolean(e) => writeln!(f, "CondIsNotBoolean: {}.", e),
             CError::CondIsNotMatching => writeln!(f, "CondIsNotMatching."),
-            CError::ArgsNotMatching(a, b) =>
-                writeln!(f, "ArgsMatchingError: this function takes {} arguments but {} argument was supplied.",
+            CError::PrarmsIsNotMatching(a, b) =>
+                writeln!(f, "PrarmsMatchingError: this function takes {} arguments but {} argument was supplied.",
                     a, b),
             CError::TypeError(e, v) =>
                 writeln!(f, "TypeError: {} is not {:?} type.", v, e),

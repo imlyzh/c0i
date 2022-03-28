@@ -29,13 +29,13 @@ impl Call for Closure {
             Scope::from(args_dict)
         };
 
-        if f.body.is_empty() {
+        if f.bodys.is_empty() {
             Ok(Value::Nil)
-        } else if f.body.len() == 1 {
-            f.body.first().unwrap().eval(&scope)
+        } else if f.bodys.len() == 1 {
+            f.bodys.first().unwrap().eval(&scope)
         } else {
-            let body_end = f.body.last().unwrap();
-            let bodys = &f.body[..f.body.len()-1];
+            let body_end = f.bodys.last().unwrap();
+            let bodys = &f.bodys[..f.bodys.len()-1];
             for i in bodys {
                 i.eval(&scope)?;
             }

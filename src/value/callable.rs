@@ -51,25 +51,25 @@ impl Display for Callable {
 
 impl Function {
     pub fn match_args(&self, args: &[Value]) -> Result<SimpleScope, CError> {
-        if self.extend_params.is_some() && args.len() >= self.params.len() {
-            let mut record: HashMap<Handle<Symbol>, Value> = self.params
+        if self.extend_prarms.is_some() && args.len() >= self.prarms.len() {
+            let mut record: HashMap<Handle<Symbol>, Value> = self.prarms
             .iter()
-            .zip(args[..self.params.len()].iter())
+            .zip(args[..self.prarms.len()].iter())
             .map(|(k, v)| (k.clone(), v.clone()))
             .collect();
             record.insert(
-                self.extend_params.clone().unwrap(),
-                Value::from(&args[self.params.len()..]));
+                self.extend_prarms.clone().unwrap(),
+                Value::from(&args[self.prarms.len()..]));
             Ok(SimpleScope::from(record))
-        } else if args.len() == self.params.len() {
-            let record: HashMap<Handle<Symbol>, Value> = self.params
+        } else if args.len() == self.prarms.len() {
+            let record: HashMap<Handle<Symbol>, Value> = self.prarms
             .iter()
             .zip(args.iter())
             .map(|(k, v)| (k.clone(), v.clone()))
             .collect();
             Ok(SimpleScope::from(record))
         } else {
-            Err(CError::ArgsNotMatching(self.params.len(), args.len()))
+            Err(CError::PrarmsIsNotMatching(self.prarms.len(), args.len()))
         }
     }
 }

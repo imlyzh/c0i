@@ -26,13 +26,13 @@ pub enum Expr {
     Let(Handle<Let>),
     Set(Handle<Set>),
     Cond(Handle<Cond>),
-    FunctionCall(Handle<Call>)
+    FunctionCall(Handle<Call>),
 }
 
 #[derive(Debug, Clone)]
 pub struct Let {
     pub binds: Vec<(Handle<Symbol>, Expr)>,
-    pub body: Vec<TopLevel>,
+    pub bodys: Vec<TopLevel>,
     pub pos: Location,
 }
 
@@ -56,8 +56,8 @@ pub struct Call(pub Vec<Expr>);
 #[derive(Debug, Clone)]
 pub struct Function {
     pub name: Option<Handle<Symbol>>,
-    pub params: Vec<Handle<Symbol>>,
-    pub extend_params: Option<Handle<Symbol>>,
-    pub body: Vec<TopLevel>,
+    pub prarms: Vec<Handle<Symbol>>,
+    pub extend_prarms: Option<Handle<Symbol>>,
+    pub bodys: Vec<TopLevel>,
     pub pos: Location,
 }

@@ -60,7 +60,7 @@ impl FreeVariables for Let {
         let mut env = env.clone();
         env.append(&mut names);
 
-        let mut body_fv: Vec<Handle<Symbol>> = self.body
+        let mut body_fv: Vec<Handle<Symbol>> = self.bodys
         .iter()
         .flat_map(|x| x.free_variables(&mut env))
         .collect();
@@ -96,13 +96,13 @@ impl FreeVariables for Call {
 impl FreeVariables for Function {
     fn free_variables(&self, env: &mut Vec<Handle<Symbol>>) -> Vec<Handle<Symbol>> {
         let mut env = env.clone();
-        let mut prarms = self.params.clone();
+        let mut prarms = self.prarms.clone();
         env.append(&mut prarms);
-        if let Some(x) = self.extend_params.clone() {
+        if let Some(x) = self.extend_prarms.clone() {
             env.push(x);
         }
 
-        let fv_record: Vec<Handle<Symbol>> = self.body
+        let fv_record: Vec<Handle<Symbol>> = self.bodys
         .iter()
         .flat_map(|x| x.free_variables(&mut env))
         .collect();

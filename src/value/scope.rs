@@ -1,5 +1,3 @@
-#![allow(unused)]
-
 use std::{collections::HashMap, sync::RwLock};
 
 use sexpr_ir::gast::{symbol::Symbol, Handle};
