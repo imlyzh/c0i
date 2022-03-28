@@ -583,7 +583,7 @@ impl CompileContext {
 
         match called_func {
             MantisGod::Left(var_id) => {
-                let _closure_tyck_info = unsafe {
+                let closure_tyck_info = unsafe {
                     let closure_vt = self.create_closure_vt(call.0.len() - 1);
                     self.tyck_info_pool.create_container_type(
                         TypeId::of::<Closure>(),
@@ -595,7 +595,7 @@ impl CompileContext {
                 };
 
                 // TODO support va-args
-                // self.code.push(Insc::TypeCheck(var_id, closure_tyck_info));
+                self.code.push(Insc::TypeCheck(var_id, closure_tyck_info));
                 self.code.push(Insc::CallPtr(var_id, unsafe {
                     self.slice_arena.unsafe_make(&args)
                 }, unsafe {
@@ -619,7 +619,7 @@ impl CompileContext {
                 }));
             },
             MantisGod::Right((is_async, ffi_func_id)) => {
-                let (arg_count, _signature) = if !is_async {
+                let (arg_count, signature) = if !is_async {
                     let signature = self.ffi_funcs[ffi_func_id]
                         .signature(&mut self.tyck_info_pool);
                     (signature.param_options.len(), signature)
@@ -629,9 +629,8 @@ impl CompileContext {
                     (signature.param_options.len(), signature)
                 };
 
-                for _ in 0..arg_count {
+                for i in 0..arg_count {
                     // TODO: re-enable after Pr47 fixes the issues
-                    /*
                     self.code.push(Insc::TypeCheck(args[i], unsafe {
                         if let TyckInfo::Function(func) = signature.func_type.as_ref() {
                             func.params.as_ref()[i].clone()
@@ -639,7 +638,6 @@ impl CompileContext {
                             unreachable!()
                         }
                     }));
-                    */
                 }
 
                 assert_eq!(arg_count, call.0.len() - 1);
