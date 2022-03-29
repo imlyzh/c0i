@@ -10,7 +10,13 @@ use sexpr_ir::gast::symbol::Symbol;
 use crate::ast::{Call, Cond, Expr, Function, Let, Set, TopLevel};
 use crate::eval47::commons::{FFIAsyncFunction, FFIFunction, Signature};
 use crate::eval47::data_map::{DataCollection, GValue};
-use crate::eval47::util::{bitcast_i64_usize, bitcast_usize_i64, clone_signature, Guard, MantisGod};
+use crate::eval47::util::{
+    bitcast_i64_usize,
+    bitcast_usize_i64,
+    clone_signature,
+    Guard,
+    MantisGod
+};
 use crate::{guard, guard2};
 use crate::value::Value;
 
@@ -29,7 +35,6 @@ pub const BUILTIN_OPS: &'static [&'static str] = &[
     ">=",
     "<=",
     "!=",
-    "unimplemented",
     "begin",
     "display",
     "vector",
@@ -37,7 +42,9 @@ pub const BUILTIN_OPS: &'static [&'static str] = &[
     "vector-ref",
     "vector-set!",
     "vector-push!",
-    "unused",
+    "object",
+    "object-get",
+    "object-set!",
     "raise"
 ];
 

@@ -3,6 +3,7 @@ use std::collections::{HashMap, VecDeque};
 use std::convert::TryInto;
 use std::ptr::NonNull;
 use pr47::builtins::closure::Closure;
+use pr47::builtins::vec::{vec_ctor, VMGenericVec};
 use pr47::data::generic::GenericTypeVT;
 use pr47::data::tyck::{TyckInfo, TyckInfoPool};
 use pr47::data::wrapper::OwnershipInfo;
@@ -894,10 +895,82 @@ impl CompileContext {
             },
             "raise" => {
                 assert_eq!(args.len(), 1, "`raise` expects 1 argument");
+                let string_type = self.tyck_info_pool.get_string_type();
+                self.code.push(Insc::TypeCheck(args[0], string_type));
                 self.code.push(Insc::Raise(args[0]));
                 tgt
             },
             "begin" | "unused" => {
+                self.code.push(Insc::MakeBoolConst(false, tgt));
+                tgt
+            },
+            "vector" => {
+                let vector_vt = self.create_vector_vt();
+                self.code.push(Insc::CreateContainer(vec_ctor, vector_vt, tgt));
+                for arg in args {
+                    self.code.push(Insc::VecPush(tgt, *arg));
+                }
+                tgt
+            },
+            "vector-length" => {
+                assert_eq!(args.len(), 1, "`vector-length` expects 1 argument");
+                let any_type = self.tyck_info_pool.get_any_type();
+                let vec_type = self.tyck_info_pool.create_container_type(TypeId::of::<VMGenericVec>(), &[any_type]);
+                self.code.push(Insc::TypeCheck(args[0], vec_type));
+                self.code.push(Insc::VecLen(args[0], tgt));
+                tgt
+            },
+            "vector-ref" => {
+                assert_eq!(args.len(), 2, "`vector-ref` expects 2 arguments");
+                let any_type = self.tyck_info_pool.get_any_type();
+                let int_type = self.tyck_info_pool.get_int_type();
+                let vec_type = self.tyck_info_pool.create_container_type(TypeId::of::<VMGenericVec>(), &[any_type]);
+                self.code.push(Insc::TypeCheck(args[0], vec_type));
+                self.code.push(Insc::TypeCheck(args[1], int_type));
+                self.code.push(Insc::VecIndex(args[0], args[1], tgt));
+                tgt
+            },
+            "vector-push!" => {
+                assert_eq!(args.len(), 2, "`vector-push!` expects 2 arguments");
+                let any_type = self.tyck_info_pool.get_any_type();
+                let vec_type = self.tyck_info_pool.create_container_type(TypeId::of::<VMGenericVec>(), &[any_type]);
+                self.code.push(Insc::TypeCheck(args[0], vec_type));
+                self.code.push(Insc::VecPush(args[0], args[1]));
+                self.code.push(Insc::MakeBoolConst(false, tgt));
+                tgt
+            },
+            "vector-set!" => {
+                assert_eq!(args.len(), 3, "`vector-set!` expects 3 arguments");
+                let any_type = self.tyck_info_pool.get_any_type();
+                let int_type = self.tyck_info_pool.get_int_type();
+                let vec_type = self.tyck_info_pool.create_container_type(TypeId::of::<VMGenericVec>(), &[any_type]);
+                self.code.push(Insc::TypeCheck(args[0], vec_type));
+                self.code.push(Insc::TypeCheck(args[1], int_type));
+                self.code.push(Insc::VecIndexPut(args[0], args[1], args[2]));
+                self.code.push(Insc::MakeBoolConst(false, tgt));
+                tgt
+            },
+            "object" => {
+                assert_eq!(args.len(), 0, "`object` expects 0 arguments");
+                self.code.push(Insc::CreateObject(tgt));
+                tgt
+            },
+            "object-get" => {
+                assert_eq!(args.len(), 2, "`object-get` expects 2 arguments");
+                let obj_type = self.tyck_info_pool.get_object_type();
+                let string_type = self.tyck_info_pool.get_string_type();
+                self.code.push(Insc::TypeCheck(args[0], obj_type));
+                self.code.push(Insc::TypeCheck(args[1], string_type));
+                self.code.push(Insc::ObjectGetDyn(args[0], args[1], tgt));
+                tgt
+            },
+            "object-set!" => {
+                assert_eq!(args.len(), 3, "`object-set!` expects 3 arguments");
+                let obj_type = self.tyck_info_pool.get_object_type();
+                let string_type = self.tyck_info_pool.get_string_type();
+                self.code.push(Insc::TypeCheck(args[0], obj_type));
+                self.code.push(Insc::TypeCheck(args[1], string_type));
+                self.code.push(Insc::ObjectPutDyn(args[0], args[1], args[2]));
                 self.code.push(Insc::MakeBoolConst(false, tgt));
                 tgt
             },
@@ -1033,6 +1106,19 @@ impl CompileContext {
             &mut self.tyck_info_pool,
             &closure_arg_types
         ));
+
+        let ret = korobka.as_nonnull();
+        self.vt_pool.push(korobka);
+        ret
+    }
+
+    fn create_vector_vt(&mut self) -> NonNull<GenericTypeVT> {
+        let any_type = self.tyck_info_pool.get_any_type();
+        let korobka = Korobka::new(pr47::builtins::vec::create_vm_vec_vt(
+            &mut self.tyck_info_pool,
+            any_type
+        ));
+
         let ret = korobka.as_nonnull();
         self.vt_pool.push(korobka);
         ret
