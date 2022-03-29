@@ -809,6 +809,15 @@ impl CompileContext {
         };
 
         Some(match op {
+            "display" => {
+                assert!(args.len() <= 32, "FFI function only supports up to 32 args");
+                self.code.push(Insc::FFICallRtlc(
+                    0,
+                    unsafe { self.slice_arena.unsafe_make(&args) },
+                    unsafe { self.slice_arena.unsafe_make(&[tgt]) }
+                ));
+                tgt
+            },
             "=" => {
                 assert_eq!(args.len(), 2, "`=` expects 2 arguments");
                 self.code.push(Insc::EqAny(args[0], args[1], tgt));
@@ -888,7 +897,7 @@ impl CompileContext {
                 self.code.push(Insc::Raise(args[0]));
                 tgt
             },
-            "unused" => {
+            "begin" | "unused" => {
                 self.code.push(Insc::MakeBoolConst(false, tgt));
                 tgt
             },
