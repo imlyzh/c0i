@@ -30,6 +30,8 @@ pub const BUILTIN_OPS: &'static [&'static str] = &[
     "<=",
     "!=",
     "unimplemented",
+    "begin",
+    "display",
     "vector",
     "vector-length",
     "vector-ref",
@@ -66,6 +68,12 @@ impl AnalyseContext {
 
     pub fn min_scope_analyse(&self, ast: &[TopLevel]) -> AnalyseResult {
         let mut result = AnalyseResult::new();
+        let display_fn = self.ffi_functions.get("display").unwrap();
+        result.ffi_function_in_use.insert(
+            "display".into(),
+            (display_fn.0.clone(), clone_signature(&display_fn.1), 0),
+        );
+
         let mut scope_chain = Some(Box::new(Scope::new(None)));
 
         self.analyse_global(&mut result, &mut scope_chain, ast);

@@ -9,7 +9,7 @@ use sexpr_ir::syntax::sexpr::parse;
 use xjbutil::std_ext::ResultExt;
 use xjbutil::unchecked::UncheckedSendSync;
 use c0ilib::ast::TopLevel;
-use c0ilib::eval47::builtins::{DBG_INT_BIND, DBG_STR_BIND};
+use c0ilib::eval47::builtins::DISPLAY_BIND;
 use c0ilib::eval47::commons::CompiledProgram;
 use c0ilib::eval47::compile::CompileContext;
 use c0ilib::eval47::min_scope_analysis::AnalyseContext;
@@ -34,7 +34,7 @@ async fn run_program(
         ).unwrap_no_debug().await.into_inner()
     };
     let end_time = std::time::Instant::now();
-    eprintln!("Program terminated, elapsed time = {}",
+    eprintln!("\nProgram terminated, elapsed time = {}",
               (end_time - start_time).as_millis());
 
     if let Err(e) = result {
@@ -85,8 +85,7 @@ fn main() {
 
     eprintln!("Performing analyse");
     let mut context = AnalyseContext::new();
-    context.register_ffi("dbg-int", &DBG_INT_BIND);
-    context.register_ffi("dbg-str", &DBG_STR_BIND);
+    context.register_ffi("display", &DISPLAY_BIND);
     let analyse_result = context.min_scope_analyse(&top_levels);
 
     if args.contains(&"--only-analyse".to_string()) {
@@ -120,14 +119,15 @@ fn main() {
     let result = compile_context.compile(&top_levels, &analyse_result);
 
     if args.contains(&"--dump-bytecode".to_string()) {
-        eprintln!("\nCompiled bytecode: ");
+        eprintln!("Compiled bytecode: ");
         unsafe {
             for (idx, insc) in result.cp.code.iter().enumerate() {
                 eprintln!(" {}) {}", idx, insc.unsafe_to_string());
             }
         }
+        eprintln!();
     }
-    eprintln!("\nStarting program\n");
+    eprintln!("Starting program\n");
 
     let application_start =
         analyse_result.global_data_map.get("ApplicationStartFuncID")
