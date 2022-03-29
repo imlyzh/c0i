@@ -142,7 +142,7 @@ fn main() {
             .unwrap();
     let application_start = bitcast_i64_usize(application_start);
 
-    tokio::runtime::Builder::new_multi_thread()
+    tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
         .expect("failed to create tokio runtime")
