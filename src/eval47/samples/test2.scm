@@ -26,7 +26,7 @@
   (display "now setting the 0th element of vector to be 5\n")
   (vector-set! vec 0 5)
   (display "the vector is: " vec "\n")
-  (display "the first element of the vector is: = " (vector-ref vec 0) "\n")
+  (display "the first element of the vector is: " (vector-ref vec 0) "\n")
   (display "\n")
 
   (define obj (object))
