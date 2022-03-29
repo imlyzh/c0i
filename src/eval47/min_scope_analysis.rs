@@ -411,12 +411,12 @@ impl AnalyseContext {
             self.analyse_expr(result, scope_chain, &bind.1);
             let var_id = scope_chain.as_mut().unwrap().add_var(bind.0.0.as_ref());
             result.data_collection.insert(
-                let_item.as_ref(),
+                bind.0.0.as_ref(),
                 "VarID",
                  bitcast_usize_i64(var_id)
             );
             result.data_collection.insert(
-                let_item.as_ref(),
+                bind.0.0.as_ref(),
                 "VarName",
                 bind.0.0.as_str()
             );

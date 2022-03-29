@@ -86,7 +86,7 @@ impl CompileContext {
     pub fn compile(
         mut self,
         ast: &[TopLevel],
-        analyse_result: &AnalyseResult
+        analyse_result: &mut AnalyseResult
     ) -> CompileResult {
         eprintln!("Compiling to bytecode");
         for global_const in analyse_result.global_consts.iter() {
@@ -167,7 +167,7 @@ impl CompileContext {
         chain
     }
 
-    fn compile_function(&mut self, func: Handle<Function>, analyse_result: &AnalyseResult) {
+    fn compile_function(&mut self, func: Handle<Function>, analyse_result: &mut AnalyseResult) {
         let func_id: i64 = analyse_result.data_collection
             .get(func.as_ref(), "FunctionID")
             .unwrap()
@@ -182,12 +182,18 @@ impl CompileContext {
             .try_into()
             .unwrap();
 
+        let function_chain = self.format_function_chain();
         let mut g = guard2!(
             func.pos,
             "compile function `{}{}` (func_id = {})",
-            self.format_function_chain(),
+            function_chain.clone(),
             func_name,
             func_id
+        );
+        analyse_result.functions.insert_raw_key(
+            func_id,
+            "ResolvedFunctionName",
+            function_chain + func_name.as_str()
         );
 
         let param_var_ids: Vec<GValue> = analyse_result.data_collection
@@ -248,7 +254,7 @@ impl CompileContext {
     fn compile_stmt_list(
         &mut self,
         stmt_list: &[TopLevel],
-        analyse_result: &AnalyseResult
+        analyse_result: &mut AnalyseResult
     ) -> Option<usize> {
         let mut ret = None;
         for stmt in stmt_list {
@@ -260,7 +266,7 @@ impl CompileContext {
     fn compile_stmt(
         &mut self,
         stmt: &TopLevel,
-        analyse_result: &AnalyseResult,
+        analyse_result: &mut AnalyseResult,
         tgt: Option<usize>
     ) -> Option<usize> {
         match stmt {
@@ -289,7 +295,7 @@ impl CompileContext {
     fn compile_expr(
         &mut self,
         expr: &Expr,
-        analyse_result: &AnalyseResult,
+        analyse_result: &mut AnalyseResult,
         tgt: Option<usize>
     ) -> usize {
         match expr {
@@ -306,7 +312,7 @@ impl CompileContext {
     fn compile_expr_for_fn_call(
         &mut self,
         expr: &Expr,
-        analyse_result: &AnalyseResult
+        analyse_result: &mut AnalyseResult
     ) -> MantisGod<usize, usize, (bool, usize)> {
         match expr {
             Expr::Variable(var) => self.compile_var_for_fn_call(var.clone(), analyse_result),
@@ -317,7 +323,7 @@ impl CompileContext {
     fn compile_value(
         &mut self,
         value: &Value,
-        analyse_result: &AnalyseResult,
+        analyse_result: &mut AnalyseResult,
         tgt: Option<usize>
     ) -> usize {
         let tgt = if let Some(tgt) = tgt {
@@ -366,7 +372,7 @@ impl CompileContext {
     fn compile_var(
         &mut self,
         var: Handle<Symbol>,
-        analyse_result: &AnalyseResult,
+        analyse_result: &mut AnalyseResult,
         tgt: Option<usize>
     ) -> usize {
         let mut g = guard2!(
@@ -422,7 +428,7 @@ impl CompileContext {
     fn compile_var_for_fn_call(
         &mut self,
         var: Handle<Symbol>,
-        analyse_result: &AnalyseResult,
+        analyse_result: &mut AnalyseResult,
     ) -> MantisGod<usize, usize, (bool, usize)> {
         let mut g = guard2!(
             var.1,
@@ -467,7 +473,7 @@ impl CompileContext {
     fn compile_lambda(
         &mut self,
         lambda: Handle<Function>,
-        analyse_result: &AnalyseResult,
+        analyse_result: &mut AnalyseResult,
         tgt: Option<usize>
     ) -> usize {
         let mut g = guard2!(
@@ -498,7 +504,7 @@ impl CompileContext {
     fn compile_let(
         &mut self,
         let_item: Handle<Let>,
-        analyse_result: &AnalyseResult,
+        analyse_result: &mut AnalyseResult,
         tgt: Option<usize>
     ) -> usize {
         let mut g = guard2!(
@@ -512,7 +518,7 @@ impl CompileContext {
                 "compile let bind `{}`",
                 bind.0.0.as_str()
             );
-            let var_id = analyse_result.data_collection.get(bind.0.as_ref(), "VarID")
+            let var_id = analyse_result.data_collection.get(bind.0.0.as_ref(), "VarID")
                 .unwrap()
                 .clone()
                 .try_into()
@@ -543,7 +549,7 @@ impl CompileContext {
     fn compile_set(
         &mut self,
         set: Handle<Set>,
-        analyse_result: &AnalyseResult,
+        analyse_result: &mut AnalyseResult,
         tgt: Option<usize>
     ) -> usize {
         let mut g = guard2!(
@@ -573,7 +579,7 @@ impl CompileContext {
     fn compile_cond(
         &mut self,
         cond: Handle<Cond>,
-        analyse_result: &AnalyseResult,
+        analyse_result: &mut AnalyseResult,
         tgt: Option<usize>
     ) -> usize {
         let mut g = guard2!(
@@ -639,7 +645,7 @@ impl CompileContext {
     fn compile_call(
         &mut self,
         call: Handle<Call>,
-        analyse_result: &AnalyseResult,
+        analyse_result: &mut AnalyseResult,
         tgt: Option<usize>
     ) -> usize {
         let mut g = if let Some(pos) = call.0[0].location() {
@@ -982,7 +988,7 @@ impl CompileContext {
         &mut self,
         op: &str,
         args: &[Expr],
-        analyse_result: &AnalyseResult,
+        analyse_result: &mut AnalyseResult,
         tgt: Option<usize>
     ) -> Option<usize> {
         let tgt = if let Some(tgt) = tgt { tgt } else {
@@ -1056,7 +1062,7 @@ impl CompileContext {
 }
 
 impl CompileContext {
-    fn convert_func_to_closure(&mut self, func_id: usize, analyse_result: &AnalyseResult, tgt: usize) {
+    fn convert_func_to_closure(&mut self, func_id: usize, analyse_result: &mut AnalyseResult, tgt: usize) {
         let params: Vec<GValue> = analyse_result.functions
             .get_raw_key(func_id, "ParamVarIDs")
             .unwrap()

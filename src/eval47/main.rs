@@ -91,7 +91,7 @@ fn main() {
     eprintln!("Performing analyse");
     let mut context = AnalyseContext::new();
     context.register_ffi("display", &DISPLAY_BIND);
-    let analyse_result = context.min_scope_analyse(&top_levels);
+    let mut analyse_result = context.min_scope_analyse(&top_levels);
 
     if args.contains(&"--only-analyse".to_string()) {
         let data_collection =
@@ -121,16 +121,28 @@ fn main() {
         &ffi_functions_in_use,
         &async_ffi_functions_in_use,
     );
-    let result = compile_context.compile(&top_levels, &analyse_result);
+    let result = compile_context.compile(&top_levels, &mut analyse_result);
 
     if args.contains(&"--dump-bytecode".to_string()) {
-        eprintln!("Compiled bytecode: ");
+        eprintln!("Compiled functions:");
+        for (idx, func) in result.cp.functions.iter().enumerate() {
+            let func_name: String = analyse_result.functions.get_raw_key(
+                idx,
+                "ResolvedFunctionName"
+            ).unwrap().clone().try_into().unwrap();
+            eprintln!(
+                "  {}) function `{}` @ {}",
+                idx,
+                func_name,
+                func.start_addr
+            );
+        }
+        eprintln!("\nCompiled bytecode: ");
         unsafe {
             for (idx, insc) in result.cp.code.iter().enumerate() {
-                eprintln!(" {}) {}", idx, insc.unsafe_to_string());
+                eprintln!("  {}) {}", idx, insc.unsafe_to_string());
             }
         }
-        eprintln!();
     }
     eprintln!("Starting program\n");
 
