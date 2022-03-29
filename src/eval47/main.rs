@@ -51,14 +51,19 @@ fn main() {
     let use_define_as_defun = !args.contains(&"--explicit-defun".to_string());
 
     let mut top_levels = Vec::new();
-    eprintln!("Transforming builtins");
-    let builtins = parse(
-        &BUILTINS.replace("(define (", "(defun  ("),
-        Arc::new("builtins".to_string())
-    ).expect("failed parsing builtins");
-    for piece in builtins {
-        top_levels.push(TopLevel::from_sexpr(&piece).unwrap());
+    if !args.contains(&"--no-builtin".to_string()) {
+        eprintln!("Transforming builtins");
+        let builtins = parse(
+            &BUILTINS.replace("(define (", "(defun  ("),
+            Arc::new("builtins".to_string())
+        ).expect("failed parsing builtins");
+        for piece in builtins {
+            top_levels.push(TopLevel::from_sexpr(&piece).unwrap());
+        }
+    } else {
+        eprintln!("Skipping builtins");
     }
+
     for arg in args.iter() {
         if arg.starts_with("--") {
             continue;
