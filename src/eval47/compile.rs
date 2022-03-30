@@ -6,7 +6,7 @@ use pr47::builtins::closure::Closure;
 use pr47::builtins::vec::{vec_ctor, VMGenericVec};
 use pr47::data::generic::GenericTypeVT;
 use pr47::data::tyck::{TyckInfo, TyckInfoPool};
-use pr47::data::wrapper::OwnershipInfo;
+use pr47::data::wrapper::{OWN_INFO_READ_MASK, OWN_INFO_WRITE_MASK, OwnershipInfo};
 use pr47::vm::al31f::insc::Insc;
 use sexpr_ir::gast::Handle;
 use sexpr_ir::gast::symbol::Symbol;
@@ -923,6 +923,7 @@ impl CompileContext {
                 let any_type = self.tyck_info_pool.get_any_type();
                 let vec_type = self.tyck_info_pool.create_container_type(TypeId::of::<VMGenericVec>(), &[any_type]);
                 self.code.push(Insc::TypeCheck(args[0], vec_type));
+                self.code.push(Insc::OwnershipInfoCheck(args[0], OWN_INFO_READ_MASK));
                 self.code.push(Insc::VecLen(args[0], tgt));
                 tgt
             },
@@ -933,6 +934,7 @@ impl CompileContext {
                 let vec_type = self.tyck_info_pool.create_container_type(TypeId::of::<VMGenericVec>(), &[any_type]);
                 self.code.push(Insc::TypeCheck(args[0], vec_type));
                 self.code.push(Insc::TypeCheck(args[1], int_type));
+                self.code.push(Insc::OwnershipInfoCheck(args[0], OWN_INFO_READ_MASK));
                 self.code.push(Insc::VecIndex(args[0], args[1], tgt));
                 tgt
             },
@@ -941,6 +943,7 @@ impl CompileContext {
                 let any_type = self.tyck_info_pool.get_any_type();
                 let vec_type = self.tyck_info_pool.create_container_type(TypeId::of::<VMGenericVec>(), &[any_type]);
                 self.code.push(Insc::TypeCheck(args[0], vec_type));
+                self.code.push(Insc::OwnershipInfoCheck(args[0], OWN_INFO_WRITE_MASK));
                 self.code.push(Insc::VecPush(args[0], args[1]));
                 self.code.push(Insc::MakeBoolConst(false, tgt));
                 tgt
@@ -952,6 +955,7 @@ impl CompileContext {
                 let vec_type = self.tyck_info_pool.create_container_type(TypeId::of::<VMGenericVec>(), &[any_type]);
                 self.code.push(Insc::TypeCheck(args[0], vec_type));
                 self.code.push(Insc::TypeCheck(args[1], int_type));
+                self.code.push(Insc::OwnershipInfoCheck(args[0], OWN_INFO_WRITE_MASK));
                 self.code.push(Insc::VecIndexPut(args[0], args[1], args[2]));
                 self.code.push(Insc::MakeBoolConst(false, tgt));
                 tgt
@@ -967,6 +971,8 @@ impl CompileContext {
                 let string_type = self.tyck_info_pool.get_string_type();
                 self.code.push(Insc::TypeCheck(args[0], obj_type));
                 self.code.push(Insc::TypeCheck(args[1], string_type));
+                self.code.push(Insc::OwnershipInfoCheck(args[0], OWN_INFO_READ_MASK));
+                self.code.push(Insc::OwnershipInfoCheck(args[1], OWN_INFO_READ_MASK));
                 self.code.push(Insc::ObjectGetDyn(args[0], args[1], tgt));
                 tgt
             },
@@ -976,6 +982,8 @@ impl CompileContext {
                 let string_type = self.tyck_info_pool.get_string_type();
                 self.code.push(Insc::TypeCheck(args[0], obj_type));
                 self.code.push(Insc::TypeCheck(args[1], string_type));
+                self.code.push(Insc::OwnershipInfoCheck(args[0], OWN_INFO_WRITE_MASK));
+                self.code.push(Insc::OwnershipInfoCheck(args[1], OWN_INFO_READ_MASK));
                 self.code.push(Insc::ObjectPutDyn(args[0], args[1], args[2]));
                 self.code.push(Insc::MakeBoolConst(false, tgt));
                 tgt

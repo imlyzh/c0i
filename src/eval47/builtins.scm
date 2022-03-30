@@ -2,24 +2,14 @@
 
 (defun (unimplemented) (raise "unimplemented"))
 
-(defun (--pr47-builtin-cons fst snd)
-    (define vec (vector fst snd))
-    (lambda (choice param)
-        (cond ((= choice 0) (vector-ref vec 0))
-              ((= choice 1) (vector-ref vec 1))
-              ((= choice 2) (vector-set! vec 0 param))
-              ((= choice 3) (vector-set! vec 1 param))
-              (else (raise "God damn it what the hell are you doing?")))
-    )
-)
+(defun (--pr47-builtin-cons fst snd) (vector fst snd))
 
 (defun (cons x y) (--pr47-builtin-cons x y))
 
-(defun (car pair) (pair 0 nil))
-(defun (cdr pair) (pair 1 nil))
-
-(defun (set-car! pair value) (pair 2 value))
-(defun (set-cdr! pair value) (pair 3 value))
+(defun (car x) (vector-ref x 0))
+(defun (cdr x) (vector-ref x 1))
+(defun (set-car! x value) (vector-set! x 0 value))
+(defun (set-cdr! x value) (vector-set! x 1 value))
 
 (defun (list-length list)
   (defun (list-length-impl list n)
