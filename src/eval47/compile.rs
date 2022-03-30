@@ -195,6 +195,11 @@ impl CompileContext {
             "ResolvedFunctionName",
             function_chain + func_name.as_str()
         );
+        analyse_result.functions.insert_raw_key(
+            func_id,
+            "ResolvedFunctionLocation",
+            format!("file \"{}\", line {}, column {}", func.pos.path, func.pos.line, func.pos.colum)
+        );
 
         let param_var_ids: Vec<GValue> = analyse_result.data_collection
             .get(func.as_ref(), "ParamVarIDs")

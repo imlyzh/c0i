@@ -125,24 +125,40 @@ fn main() {
 
     if args.contains(&"--dump-bytecode".to_string()) {
         eprintln!("Compiled functions:");
-        for (idx, func) in result.cp.functions.iter().enumerate() {
+
+        for idx in 0..result.cp.functions.len() {
             let func_name: String = analyse_result.functions.get_raw_key(
                 idx,
                 "ResolvedFunctionName"
             ).unwrap().clone().try_into().unwrap();
+            let func_pos: String = analyse_result.functions.get_raw_key(
+                idx,
+                "ResolvedFunctionLocation"
+            ).unwrap().clone().try_into().unwrap();
+
+            let func = &result.cp.functions[idx];
             eprintln!(
-                "  {}) function `{}` @ {}",
+                "[{}] \"{}\" @ {}",
                 idx,
                 func_name,
-                func.start_addr
+                func_pos
             );
-        }
-        eprintln!("\nCompiled bytecode: ");
-        unsafe {
-            for (idx, insc) in result.cp.code.iter().enumerate() {
-                eprintln!("  {}) {}", idx, insc.unsafe_to_string());
+
+            if idx == result.cp.functions.len() - 1 {
+                for i in func.start_addr..result.cp.code.len() {
+                    let insc = &result.cp.code[i];
+                    eprintln!("    {:6}) {}", i, unsafe { insc.unsafe_to_string() });
+                }
+            } else {
+                let next_func = &result.cp.functions[idx + 1];
+                for i in func.start_addr..next_func.start_addr {
+                    let insc = &result.cp.code[i];
+                    eprintln!("    {:6}) {}", i, unsafe { insc.unsafe_to_string() });
+                }
             }
         }
+
+        eprintln!()
     }
     eprintln!("Starting program\n");
 
