@@ -1009,6 +1009,29 @@ impl CompileContext {
         };
 
         Some(match op {
+            "spawn" => {
+                if let MantisGod::Middle(func_id) = self.compile_expr_for_fn_call(&args[0], analyse_result) {
+                    let param_var_ids: Vec<GValue> = analyse_result.functions
+                        .get_raw_key(func_id, "ParamVarIDs")
+                        .unwrap()
+                        .clone()
+                        .try_into()
+                        .unwrap();
+                    let param_count = param_var_ids.len();
+                    assert_eq!(param_count, args.len() - 1,
+                               "`spawn` expects the same number of arguments as the function it is spawning");
+                    let mut spawn_args = Vec::new();
+                    for arg in args.iter().skip(1) {
+                        spawn_args.push(self.compile_expr(arg, analyse_result, None));
+                    }
+
+                    self.code.push(Insc::Spawn(func_id, unsafe { self.slice_arena.unsafe_make(&spawn_args) }));
+                    self.code.push(Insc::Await(0, unsafe { self.slice_arena.unsafe_make(&[tgt]) }));
+                    tgt
+                } else {
+                    panic!("`spawn` expects a normal function as its first argument");
+                }
+            },
             "and" => {
                 assert!(args.len() >= 2, "`and` requires at least two arguments");
                 let mut jump_to_fail_idx = Vec::new();

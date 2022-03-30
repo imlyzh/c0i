@@ -45,6 +45,7 @@ pub const BUILTIN_OPS: &'static [&'static str] = &[
     "object",
     "object-get",
     "object-set!",
+    "spawn",
     "raise"
 ];
 
