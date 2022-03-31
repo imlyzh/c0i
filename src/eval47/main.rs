@@ -2,6 +2,7 @@ use std::convert::TryInto;
 use std::env;
 use std::fs::read_to_string;
 use std::sync::Arc;
+use build_time::build_time_utc;
 use pr47::data::exception::Exception;
 use pr47::vm::al31f::alloc::default_alloc::DefaultAlloc;
 use pr47::vm::al31f::executor::{create_vm_main_thread, vm_thread_run_function, VMThread};
@@ -47,6 +48,14 @@ async fn run_program(
 
 fn main() {
     let args = env::args().skip(1).collect::<Vec<_>>();
+
+    let build_time = build_time_utc!("%Y-%m-%dT%H:%M:%S%:z");
+    if !args.contains(&"--no-splash".to_string()) {
+        #[cfg(debug_assertions)]
+        eprintln!(include_str!("./splash.txt"), build_time, "debug");
+        #[cfg(not(debug_assertions))]
+        eprintln!(include_str!("./splash.txt"), build_time, "release");
+    }
 
     let use_define_as_defun = !args.contains(&"--explicit-defun".to_string());
 

@@ -1,3 +1,5 @@
+(defun (stdlib-version) (vector 0 0 0))
+
 (defun (unused x) x)
 
 (defun (unimplemented) (raise "unimplemented"))

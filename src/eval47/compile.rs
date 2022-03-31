@@ -461,8 +461,22 @@ impl CompileContext {
             "Function" => {
                 let func_id = var_ref[1].clone().try_into().unwrap();
                 let func_id = bitcast_i64_usize(func_id);
-                g.cancel();
-                MantisGod::Middle(func_id)
+
+                let captures: Vec<GValue> = analyse_result.functions
+                    .get_raw_key(func_id, "Captures")
+                    .unwrap()
+                    .clone()
+                    .try_into()
+                    .unwrap();
+                if !captures.is_empty() {
+                    let tgt = self.compiling_function_chain.last_mut().unwrap().allocate_temp();
+                    self.convert_func_to_closure(func_id, analyse_result, tgt);
+                    g.cancel();
+                    MantisGod::Left(tgt)
+                } else {
+                    g.cancel();
+                    MantisGod::Middle(func_id)
+                }
             },
             "FFI" => {
                 let is_async = var_ref[1].clone().try_into().unwrap();
