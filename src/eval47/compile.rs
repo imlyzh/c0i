@@ -946,6 +946,7 @@ impl CompileContext {
                 assert_eq!(args.len(), 1, "`string-length` or `strlen` expects 1 argument");
                 let string_type = self.tyck_info_pool.get_string_type();
                 self.code.push(Insc::TypeCheck(args[0], string_type));
+                self.code.push(Insc::OwnershipInfoCheck(args[0], OWN_INFO_READ_MASK));
                 self.code.push(Insc::StrLen(args[0], tgt));
                 tgt
             },
@@ -954,6 +955,8 @@ impl CompileContext {
                 let string_type = self.tyck_info_pool.get_string_type();
                 self.code.push(Insc::TypeCheck(args[0], string_type));
                 self.code.push(Insc::TypeCheck(args[1], string_type));
+                self.code.push(Insc::OwnershipInfoCheck(args[0], OWN_INFO_READ_MASK));
+                self.code.push(Insc::OwnershipInfoCheck(args[1], OWN_INFO_READ_MASK));
                 self.code.push(Insc::StrEquals(args[0], args[1], tgt));
                 tgt
             },
