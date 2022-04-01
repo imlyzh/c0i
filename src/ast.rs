@@ -30,6 +30,8 @@ pub enum Expr {
 }
 
 impl Expr {
+    // This function is in fact used, but marked as dead code by the compiler. Weird.
+    #[allow(dead_code)]
     pub fn location(&self) -> Option<&Location> {
         match self {
             Expr::Value(_) => None,

@@ -1,6 +1,6 @@
 [package]
 name = "c0i"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["Lyzh <enterindex@gmail.com>"]
 edition = "2018"
 
@@ -36,7 +36,7 @@ pr47 = { git="https://github.com/Pr47/Pr47", default-features=false, features=[
     "async",
     "async-tokio"
 ] }
-xjbutil = { git="https://github.com/Pr47/xjbutil", default-features=false, features=[
+xjbutil = { version="0.7.0", default-features=false, features=[
     "slice-arena",
     "either",
     "makro",
