@@ -2,6 +2,8 @@
 
 (defun (unused x) x)
 
+(defun (pass))
+
 (defun (unimplemented) (raise "unimplemented"))
 
 (defun (--pr47-builtin-cons fst snd) (vector fst snd))

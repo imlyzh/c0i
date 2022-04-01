@@ -7,4 +7,8 @@
            (+ the-number 1)
            "\n"
   )
+  (cond ((or (= the-number 114514)
+             (= the-number 1919810))
+         (display "The number is so stench!"))
+        (else (pass)))
 )
