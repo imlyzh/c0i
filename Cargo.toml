@@ -27,14 +27,15 @@ build-time = "0.1.1"
 lazy_static = "1.4"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-tokio = { version = "1" }
+tokio = { version = "1", features = ["fs"] }
 sexpr_ir = { git="https://github.com/imlyzh/sexpr_ir" }
 pr47 = { git="https://github.com/Pr47/Pr47", default-features=false, features=[
     "al31f",
     "al31f-builtin-ops",
     "optimized-rtlc",
     "async",
-    "async-tokio"
+    "async-tokio",
+    "std47"
 ] }
 xjbutil = { version="0.7.0", default-features=false, features=[
     "slice-arena",

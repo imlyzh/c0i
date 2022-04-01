@@ -861,6 +861,19 @@ impl CompileContext {
                 }
                 tgt
             },
+            "~" => {
+                assert!(args.len() >= 2, "`~` expects at least 2 arguments");
+                let string_type = self.tyck_info_pool.get_string_type();
+                for i in 0..args.len() {
+                    self.code.push(Insc::TypeCheck(args[i], string_type));
+                }
+
+                self.code.push(Insc::StrConcat(
+                    unsafe { self.slice_arena.unsafe_make(&args) },
+                    tgt
+                ));
+                tgt
+            },
             "-" => {
                 assert_eq!(args.len(), 2, "`-` expects 2 arguments");
                 self.code.push(Insc::SubAny(args[0], args[1], tgt));
@@ -927,6 +940,21 @@ impl CompileContext {
             },
             "begin" | "unused" => {
                 self.code.push(Insc::MakeBoolConst(false, tgt));
+                tgt
+            },
+            "string-length" | "strlen" => {
+                assert_eq!(args.len(), 1, "`string-length` or `strlen` expects 1 argument");
+                let string_type = self.tyck_info_pool.get_string_type();
+                self.code.push(Insc::TypeCheck(args[0], string_type));
+                self.code.push(Insc::StrLen(args[0], tgt));
+                tgt
+            },
+            "string-equals?" | "strcmp" => {
+                assert_eq!(args.len(), 2, "`string-equals?` or `strcmp` expects 2 arguments");
+                let string_type = self.tyck_info_pool.get_string_type();
+                self.code.push(Insc::TypeCheck(args[0], string_type));
+                self.code.push(Insc::TypeCheck(args[1], string_type));
+                self.code.push(Insc::StrEquals(args[0], args[1], tgt));
                 tgt
             },
             "vector" => {

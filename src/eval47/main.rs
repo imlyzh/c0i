@@ -10,7 +10,7 @@ use sexpr_ir::syntax::sexpr::parse;
 use xjbutil::std_ext::ResultExt;
 use xjbutil::unchecked::UncheckedSendSync;
 use c0ilib::ast::TopLevel;
-use c0ilib::eval47::builtins::DISPLAY_BIND;
+use c0ilib::eval47::builtins::{DISPLAY_BIND, PARSE_INT_BIND, READ_LINE_BIND};
 use c0ilib::eval47::commons::CompiledProgram;
 use c0ilib::eval47::compile::CompileContext;
 use c0ilib::eval47::min_scope_analysis::AnalyseContext;
@@ -100,6 +100,8 @@ fn main() {
     eprintln!("Performing analyse");
     let mut context = AnalyseContext::new();
     context.register_ffi("display", &DISPLAY_BIND);
+    context.register_ffi("read-line", &READ_LINE_BIND);
+    context.register_ffi("string->int", &PARSE_INT_BIND);
     let mut analyse_result = context.min_scope_analyse(&top_levels);
 
     if args.contains(&"--only-analyse".to_string()) {

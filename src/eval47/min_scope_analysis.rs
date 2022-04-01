@@ -23,6 +23,7 @@ use crate::value::Value;
 pub const BUILTIN_OPS: &'static [&'static str] = &[
     "=",
     "+",
+    "~",
     "-",
     "*",
     "/",
@@ -38,6 +39,10 @@ pub const BUILTIN_OPS: &'static [&'static str] = &[
     "begin",
     "display",
     "vector",
+    "strlen",
+    "string-length",
+    "strcmp",
+    "string-equals?",
     "vector-length",
     "vector-ref",
     "vector-set!",

@@ -1,4 +1,5 @@
 use std::any::TypeId;
+use std::io;
 use pr47::builtins::closure::Closure;
 use pr47::builtins::object::Object;
 use pr47::builtins::vec::VMGenericVec;
@@ -11,7 +12,20 @@ use pr47::ffi::sync_fn::{FunctionBase, value_into_ref_noalias, VMContext};
 use xjbutil::boxed_slice;
 use xjbutil::unchecked::{UncheckedCellOps, UnsafeFrom};
 
+macro_rules! implement_blanket_call_unchecked {
+    () => {
+        unsafe fn call_unchecked<CTX: VMContext>(
+            _context: &mut CTX,
+            _args: &[Value],
+            _rets: &[*mut Value]
+        ) -> Result<(), FFIException> {
+            unimplemented!("`call_unchecked` should never be used for eval47")
+        }
+    }
+}
+
 pub struct DisplayBind;
+pub const DISPLAY_BIND: DisplayBind = DisplayBind;
 
 unsafe fn display_value(value: Value) {
     if value.is_value() {
@@ -95,13 +109,86 @@ impl FunctionBase for DisplayBind {
         Ok(())
     }
 
-    unsafe fn call_unchecked<CTX: VMContext>(
-        _context: &mut CTX,
-        _args: &[Value],
-        _rets: &[*mut Value]
-    ) -> Result<(), FFIException> {
-        unimplemented!("`call_unchecked` should never be used for eval47")
-    }
+    implement_blanket_call_unchecked!{}
 }
 
-pub const DISPLAY_BIND: DisplayBind = DisplayBind;
+pub struct ReadLineBind;
+pub const READ_LINE_BIND: ReadLineBind = ReadLineBind;
+
+impl FunctionBase for ReadLineBind {
+    fn signature(tyck_info_pool: &mut TyckInfoPool) -> Signature {
+        Signature {
+            func_type: tyck_info_pool.create_function_type(
+                &[],
+                &[],
+                &[tyck_info_pool.get_string_type()]
+            ),
+            param_options: boxed_slice![],
+            ret_option: boxed_slice![DataOption::Move]
+        }
+    }
+
+    unsafe fn call_rtlc<CTX: VMContext>(
+        context: &mut CTX,
+        _args: &[Value],
+        rets: &[*mut Value]
+    ) -> Result<(), FFIException> {
+        let mut s = String::new();
+        match io::stdin().read_line(&mut s) {
+            Ok(_) => {
+                s = s.trim().to_string();
+                let value = Value::new_owned(s);
+                context.add_heap_managed(value);
+                *rets[0] = value;
+                Ok(())
+            },
+            Err(e) => {
+                let e = Value::new_owned(e);
+                context.add_heap_managed(e);
+                Err(FFIException::Checked(e))
+            }
+        }
+    }
+
+    implement_blanket_call_unchecked!{}
+}
+
+
+pub struct ParseIntBind;
+pub const PARSE_INT_BIND: ParseIntBind = ParseIntBind;
+
+impl FunctionBase for ParseIntBind {
+    fn signature(tyck_info_pool: &mut TyckInfoPool) -> Signature {
+        Signature {
+            func_type: tyck_info_pool.create_function_type(
+                &[tyck_info_pool.get_string_type()],
+                &[],
+                &[tyck_info_pool.get_int_type()]
+            ),
+            param_options: boxed_slice![DataOption::Share],
+            ret_option: boxed_slice![DataOption::Move]
+        }
+    }
+
+    unsafe fn call_rtlc<CTX: VMContext>(
+        context: &mut CTX,
+        args: &[Value],
+        rets: &[*mut Value]
+    ) -> Result<(), FFIException> {
+        let s: &String = value_into_ref_noalias(args[0])?;
+        match s.parse::<i64>() {
+            Ok(i) => {
+                let value = Value::new_int(i);
+                *rets[0] = value;
+                Ok(())
+            },
+            Err(e) => {
+                let e = Value::new_owned(e);
+                context.add_heap_managed(e);
+                Err(FFIException::Checked(e))
+            }
+        }
+    }
+
+    implement_blanket_call_unchecked!{}
+}
