@@ -2,8 +2,7 @@
   (display "testing loop with break\n  ")
   (define x 10)
   (loop
-    (cond ((<= x 0) (break))
-          (else (pass)))
+    (if (<= x 0) (break))
     (display x ", ")
     (set! x (- x 1))
   )
