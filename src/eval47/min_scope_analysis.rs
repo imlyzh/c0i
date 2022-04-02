@@ -38,6 +38,7 @@ pub const BUILTIN_OPS: &'static [&'static str] = &[
     "!=",
     "pass",
     "unused",
+    "if",
     "loop",
     "break",
     "continue",

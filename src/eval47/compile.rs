@@ -1099,6 +1099,27 @@ impl CompileContext {
                 self.code.push(Insc::Jump(loop_ctx.loop_start_addr));
                 tgt
             },
+            "if" => {
+                assert!(args.len() == 3 || args.len() == 2, "`if` expects 2 or 3 arguments");
+                let cond = self.compile_expr(&args[0], analyse_result, None);
+                let then_addr = self.code.len();
+                self.code.push(Insc::JumpIfFalse(0, 0));
+                self.compile_expr(&args[1], analyse_result, Some(tgt));
+                let then_done_addr = self.code.len();
+                self.code.push(Insc::Jump(0));
+                let else_addr = self.code.len();
+                if args.len() == 3 {
+                    self.compile_expr(&args[2], analyse_result, Some(tgt));
+                } else {
+                    self.code.push(Insc::MakeBoolConst(false, tgt));
+                }
+                let done_addr = self.code.len();
+
+                self.code[then_addr] = Insc::JumpIfFalse(cond, else_addr);
+                self.code[then_done_addr] = Insc::Jump(done_addr);
+
+                tgt
+            },
             "spawn" => {
                 if let MantisGod::Middle(func_id) = self.compile_expr_for_fn_call(&args[0], analyse_result) {
                     let param_var_ids: Vec<GValue> = analyse_result.functions
