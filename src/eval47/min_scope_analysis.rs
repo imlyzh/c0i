@@ -117,36 +117,42 @@ impl AnalyseContext {
         globals: &[TopLevel]
     ) {
         for global in globals {
-            if let TopLevel::Function(func_handle) = global {
-                let func_id = scope_chain.as_mut().unwrap().add_func(
-                    func_handle.name
-                        .as_ref()
-                        .expect("Why the function name is empty anyway?")
-                        .0
-                        .as_str()
-                );
-                result.data_collection.insert(
-                    func_handle.as_ref(),
-                    "FunctionName",
-                    func_handle.name.as_ref().unwrap().0.as_str(),
-                );
-                result.data_collection.insert(
-                    func_handle.as_ref(),
-                    "FunctionID",
-                    bitcast_usize_i64(func_id)
-                );
-                result.functions.insert_raw_key(
-                    func_id,
-                    "FunctionName",
-                    func_handle.name.as_ref().unwrap().0.as_str(),
-                );
-                result.functions.insert_raw_key(
-                    func_id,
-                    "FunctionID",
-                    bitcast_usize_i64(func_id)
-                );
-            } else {
-                panic!("global variables or expressions are not supported by Pr47");
+            match global {
+                TopLevel::Function(func_handle) => {
+                    let func_id = scope_chain.as_mut().unwrap().add_func(
+                        func_handle.name
+                            .as_ref()
+                            .expect("Why the function name is empty anyway?")
+                            .0
+                            .as_str()
+                    );
+                    result.data_collection.insert(
+                        func_handle.as_ref(),
+                        "FunctionName",
+                        func_handle.name.as_ref().unwrap().0.as_str(),
+                    );
+                    result.data_collection.insert(
+                        func_handle.as_ref(),
+                        "FunctionID",
+                        bitcast_usize_i64(func_id)
+                    );
+                    result.functions.insert_raw_key(
+                        func_id,
+                        "FunctionName",
+                        func_handle.name.as_ref().unwrap().0.as_str(),
+                    );
+                    result.functions.insert_raw_key(
+                        func_id,
+                        "FunctionID",
+                        bitcast_usize_i64(func_id)
+                    );
+                }
+                TopLevel::Expr(Expr::Value(_)) => {
+                    // skip
+                }
+                _ => {
+                    panic!("global variables or expressions are not supported by Pr47");
+                }
             }
         }
 
