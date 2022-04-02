@@ -1,8 +1,6 @@
-(defun (stdlib-version) (vector 0 0 0))
+(defun (stdlib-version) (vector 0 0 1))
 
 (defun (unused x) x)
-
-(defun (pass))
 
 (defun (unimplemented) (raise "unimplemented"))
 

@@ -35,8 +35,9 @@ pub struct CompileContext {
 
     compiling_function_chain: Vec<CompilingFunction>,
     compiling_function_names: Vec<String>,
+    compiling_loops: Vec<LoopContext>,
 
-    func_queue: VecDeque<(Vec<String>, Handle<Function>)>
+    func_queue: VecDeque<(Vec<String>, Handle<Function>)>,
 }
 
 pub struct CompileResult {
@@ -77,6 +78,7 @@ impl CompileContext {
 
             compiling_function_chain: Vec::new(),
             compiling_function_names: Vec::new(),
+            compiling_loops: Vec::new(),
 
             func_queue: VecDeque::new()
         };
@@ -154,6 +156,20 @@ impl CompilingFunction {
 
     fn translate_local_id_to_address(&self, id: usize) -> usize {
         id + self.capture_count
+    }
+}
+
+struct LoopContext {
+    loop_start_addr: usize,
+    pending_breaks: Vec<usize>
+}
+
+impl LoopContext {
+    pub fn new(loop_start_addr: usize) -> Self {
+        Self {
+            loop_start_addr,
+            pending_breaks: Vec::new()
+        }
     }
 }
 
@@ -938,7 +954,7 @@ impl CompileContext {
                 self.code.push(Insc::Raise(args[0]));
                 tgt
             },
-            "begin" | "unused" => {
+            "begin" | "unused" | "pass" => {
                 self.code.push(Insc::MakeBoolConst(false, tgt));
                 tgt
             },
@@ -1054,6 +1070,35 @@ impl CompileContext {
         };
 
         Some(match op {
+            "loop" => {
+                let loop_start = self.code.len();
+                self.compiling_loops.push(LoopContext::new(loop_start));
+                for arg in args {
+                    self.compile_expr(arg, analyse_result, None);
+                }
+                self.code.push(Insc::Jump(loop_start));
+                let loop_end = self.code.len();
+                let loop_ctx = self.compiling_loops.pop().unwrap();
+
+                for pending_break in loop_ctx.pending_breaks.iter() {
+                    self.code[*pending_break] = Insc::Jump(loop_end);
+                }
+
+                self.code.push(Insc::MakeBoolConst(false, tgt));
+                tgt
+            },
+            "break" => {
+                let loop_ctx = self.compiling_loops.last_mut().unwrap();
+                loop_ctx.pending_breaks.push(self.code.len());
+                self.code.push(Insc::MakeBoolConst(false, tgt));
+                tgt
+            },
+            "continue" => {
+                let loop_ctx = self.compiling_loops.last_mut()
+                    .expect("`continue` outside of loop");
+                self.code.push(Insc::Jump(loop_ctx.loop_start_addr));
+                tgt
+            },
             "spawn" => {
                 if let MantisGod::Middle(func_id) = self.compile_expr_for_fn_call(&args[0], analyse_result) {
                     let param_var_ids: Vec<GValue> = analyse_result.functions
