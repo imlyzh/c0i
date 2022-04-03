@@ -129,14 +129,14 @@ fn main() {
 
     let mut ffi_functions_in_use = analyse_result.ffi_function_in_use.iter()
         .collect::<Vec<_>>();
-    ffi_functions_in_use.sort_by_key(|x| x.0);
+    ffi_functions_in_use.sort_by_key(|x| x.1.2);
     let ffi_functions_in_use = ffi_functions_in_use.into_iter()
         .map(|(_, v)| v.0)
         .collect::<Vec<_>>();
 
     let mut async_ffi_functions_in_use = analyse_result.async_ffi_function_in_use.iter()
         .collect::<Vec<_>>();
-    async_ffi_functions_in_use.sort_by_key(|x| x.0);
+    async_ffi_functions_in_use.sort_by_key(|x| x.1.2);
     let async_ffi_functions_in_use = async_ffi_functions_in_use.into_iter()
         .map(|(_, v)| v.0)
         .collect::<Vec<_>>();
