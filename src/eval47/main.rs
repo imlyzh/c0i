@@ -14,7 +14,7 @@ use c0ilib::eval47::builtins::{DISPLAY_BIND, PARSE_INT_BIND, READ_LINE_BIND};
 use c0ilib::eval47::commons::CompiledProgram;
 use c0ilib::eval47::compile::CompileContext;
 use c0ilib::eval47::min_scope_analysis::AnalyseContext;
-use c0ilib::eval47::util::bitcast_i64_usize;
+use c0ilib::eval47::util::{bitcast_i64_usize, read_to_string_trim_comments};
 use c0ilib::sexpr_to_ast::FromSexpr;
 
 const BUILTINS: &'static str = include_str!("./builtins.scm");
@@ -79,7 +79,7 @@ fn main() {
         }
 
         eprintln!("Transforming source file `{}`", arg);
-        let file_content = read_to_string(arg).unwrap();
+        let file_content = read_to_string_trim_comments(arg).unwrap();
         let sexprs = if use_define_as_defun {
             parse(
                 &file_content.replace("(define (", "(defun  (")

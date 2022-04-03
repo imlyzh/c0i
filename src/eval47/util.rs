@@ -1,3 +1,5 @@
+use std::fs::File;
+use std::io::{BufRead, BufReader};
 use std::mem::transmute;
 use sexpr_ir::gast::symbol::Location;
 
@@ -21,6 +23,25 @@ pub fn bitcast_usize_i64(src: usize) -> i64 {
 #[cfg(target_pointer_width = "64")]
 pub fn bitcast_i64_usize(src: i64) -> usize {
     unsafe { transmute(src) }
+}
+
+pub fn read_to_string_trim_comments(path: &str) -> Result<String, std::io::Error> {
+    let file = File::open(path)?;
+    let mut file = BufReader::new(file);
+    let mut content = String::new();
+    let mut line = String::new();
+
+    while file.read_line(&mut line)? > 0 {
+        let parts = line.split(";").collect::<Vec<_>>();
+        content.push_str(&parts[0]);
+        if parts.len() > 1 {
+            content.push('\n');
+        }
+
+        line.clear();
+    }
+
+    Ok(content)
 }
 
 pub use xjbutil::either::Either as Mantis;
