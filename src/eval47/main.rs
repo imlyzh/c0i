@@ -1,7 +1,7 @@
 use std::convert::TryInto;
 use std::env;
-use std::fs::read_to_string;
 use std::sync::Arc;
+
 use build_time::build_time_utc;
 use pr47::data::exception::Exception;
 use pr47::vm::al31f::alloc::default_alloc::DefaultAlloc;
@@ -9,8 +9,17 @@ use pr47::vm::al31f::executor::{create_vm_main_thread, vm_thread_run_function, V
 use sexpr_ir::syntax::sexpr::parse;
 use xjbutil::std_ext::ResultExt;
 use xjbutil::unchecked::UncheckedSendSync;
+
 use c0ilib::ast::TopLevel;
-use c0ilib::eval47::builtins::{DISPLAY_BIND, PARSE_INT_BIND, READ_LINE_BIND};
+use c0ilib::eval47::builtins::{
+    DISPLAY_BIND,
+    INT_TO_STRING_BIND,
+    PARSE_INT_BIND,
+    RAND_BIND,
+    READ_LINE_BIND,
+    SPLIT_BIND,
+    TO_CHAR_ARRAY_BIND
+};
 use c0ilib::eval47::commons::CompiledProgram;
 use c0ilib::eval47::compile::CompileContext;
 use c0ilib::eval47::min_scope_analysis::AnalyseContext;
@@ -102,6 +111,10 @@ fn main() {
     context.register_ffi("display", &DISPLAY_BIND);
     context.register_ffi("read-line", &READ_LINE_BIND);
     context.register_ffi("string->int", &PARSE_INT_BIND);
+    context.register_ffi("int->string", &INT_TO_STRING_BIND);
+    context.register_ffi("random", &RAND_BIND);
+    context.register_ffi("string->chars", &TO_CHAR_ARRAY_BIND);
+    context.register_ffi("split", &SPLIT_BIND);
     let mut analyse_result = context.min_scope_analyse(&top_levels);
 
     if args.contains(&"--only-analyse".to_string()) {

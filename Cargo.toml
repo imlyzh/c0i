@@ -43,5 +43,6 @@ xjbutil = { version="0.7.0", default-features=false, features=[
     "makro",
     "korobka",
     "value",
-    "value-serde"
+    "value-serde",
+    "rand"
 ] }
