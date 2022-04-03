@@ -132,8 +132,8 @@ impl FunctionBase for ReadLineBind {
         Signature {
             func_type: tyck_info_pool.create_function_type(
                 &[],
-                &[],
-                &[tyck_info_pool.get_string_type()]
+                &[tyck_info_pool.get_string_type()],
+                &[]
             ),
             param_options: boxed_slice![],
             ret_option: boxed_slice![DataOption::Move]
@@ -173,8 +173,8 @@ impl FunctionBase for ParseIntBind {
         Signature {
             func_type: tyck_info_pool.create_function_type(
                 &[tyck_info_pool.get_string_type()],
-                &[],
-                &[tyck_info_pool.get_int_type()]
+                &[tyck_info_pool.get_int_type()],
+                &[]
             ),
             param_options: boxed_slice![DataOption::Share],
             ret_option: boxed_slice![DataOption::Copy]
@@ -243,8 +243,8 @@ impl FunctionBase for RandBind {
         Signature {
             func_type: tyck_info_pool.create_function_type(
                 &[],
-                &[],
-                &[tyck_info_pool.get_int_type()]
+                &[tyck_info_pool.get_int_type()],
+                &[]
             ),
             param_options: boxed_slice![],
             ret_option: boxed_slice![DataOption::Copy]
@@ -279,8 +279,8 @@ impl FunctionBase for ToCharArrayBind {
         Signature {
             func_type: tyck_info_pool.create_function_type(
                 &[string_type],
-                &[],
-                &[container_type]
+                &[container_type],
+                &[]
             ),
             param_options: boxed_slice![DataOption::Share],
             ret_option: boxed_slice![DataOption::Move]
@@ -322,8 +322,8 @@ impl FunctionBase for SplitBind {
         Signature {
             func_type: tyck_info_pool.create_function_type(
                 &[string_type, char_type],
-                &[],
-                &[container_type]
+                &[container_type],
+                &[]
             ),
             param_options: boxed_slice![DataOption::Share, DataOption::Copy],
             ret_option: boxed_slice![DataOption::Move]

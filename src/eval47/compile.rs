@@ -804,7 +804,6 @@ impl CompileContext {
                            arg_count, call.0.len() - 1);
 
                 for i in 0..arg_count {
-                    // TODO: re-enable after Pr47 fixes the issues
                     self.code.push(Insc::TypeCheck(args[i], unsafe {
                         if let TyckInfo::Function(func) = signature.func_type.as_ref() {
                             func.params.as_ref()[i].clone()

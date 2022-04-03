@@ -112,7 +112,7 @@ fn main() {
     context.register_ffi("read-line", &READ_LINE_BIND);
     context.register_ffi("string->int", &PARSE_INT_BIND);
     context.register_ffi("int->string", &INT_TO_STRING_BIND);
-    context.register_ffi("random", &RAND_BIND);
+    context.register_ffi("rand", &RAND_BIND);
     context.register_ffi("string->chars", &TO_CHAR_ARRAY_BIND);
     context.register_ffi("split", &SPLIT_BIND);
     let mut analyse_result = context.min_scope_analyse(&top_levels);
