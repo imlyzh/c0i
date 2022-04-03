@@ -116,7 +116,7 @@ fn main() {
     context.register_ffi("rand", &RAND_BIND);
     context.register_ffi("string->chars", &TO_CHAR_ARRAY_BIND);
     context.register_ffi("split", &SPLIT_BIND);
-    context.register_ffi("sleep", &SLEEP_MS_BIND);
+    context.register_async_ffi("sleep", SLEEP_MS_BIND);
     let mut analyse_result = context.min_scope_analyse(&top_levels);
 
     if args.contains(&"--only-analyse".to_string()) {
