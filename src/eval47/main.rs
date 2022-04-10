@@ -67,15 +67,11 @@ fn main() {
         eprintln!(include_str!("./splash.txt"), build_time, "release");
     }
 
-    let use_define_as_defun = !args.contains(&"--explicit-defun".to_string());
-
     let mut top_levels = Vec::new();
     if !args.contains(&"--no-builtin".to_string()) {
         eprintln!("Transforming builtins");
-        let builtins = parse(
-            &BUILTINS.replace("(define (", "(defun  ("),
-            Arc::new("builtins".to_string())
-        ).expect("failed parsing builtins");
+        let builtins = parse(BUILTINS, Arc::new("builtins".to_string()))
+            .expect("failed parsing builtins");
         for piece in builtins {
             top_levels.push(TopLevel::from_sexpr(&piece).unwrap());
         }
@@ -90,15 +86,8 @@ fn main() {
 
         eprintln!("Transforming source file `{}`", arg);
         let file_content = read_to_string_trim_comments(arg).unwrap();
-        let sexprs = if use_define_as_defun {
-            parse(
-                &file_content.replace("(define (", "(defun  (")
-                    .replace("(define(", "(defun ("),
-                Arc::new(arg.to_string())
-            )
-        } else {
-            parse(&file_content, Arc::new(arg.to_string()))
-        }.expect("failed parsing source file");
+        let sexprs = parse(&file_content, Arc::new(arg.to_string()))
+            .expect("failed parsing source file");
         for piece in sexprs {
             top_levels.push(
                 TopLevel::from_sexpr(&piece)
