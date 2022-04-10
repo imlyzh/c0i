@@ -103,6 +103,7 @@ fn vector_map(args: Vec<Value>) -> CResult {
 impl_wrap!(VECTOR_MAP_WRAP, VECTOR_MAP_NAME, vector_map, "vector-map", &LOCATION);
  */
 
+#[allow(dead_code)]
 fn vector_reduce(args: Vec<Value>) -> CResult {
     if args.len() != 2 {
         return Err(CError::ArgsNotMatching(2, args.len()));

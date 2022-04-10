@@ -25,12 +25,15 @@ fn native_add_str(args: Vec<Value>) -> CResult {
 impl_wrap!(ADD_STR_WRAP, ADD_STR_NAME, native_add_str, "+s", &LOCATION);
 
 
-fn to_literal(args: Vec<Value>) -> CResult {
-    if args.len() != 2 {
-        return Err(CError::ArgsNotMatching(2, args.len()));
+fn to_str(args: Vec<Value>) -> CResult {
+    if args.len() != 1 {
+        return Err(CError::ArgsNotMatching(1, args.len()));
     }
     let r = args.get(0).unwrap().to_string();
     Ok(Value::Str(Handle::new(r)))
 }
 
-impl_wrap!(LITERAL_WRAP, LITERAL_NAME, to_literal, "->str", &LOCATION);
+impl_wrap!(TO_STR_WRAP, TO_STR_NAME, to_str, "->str", &LOCATION);
+
+
+// impl_wrap!(LITERAL_WRAP, LITERAL_NAME, to_str, "->str", &LOCATION);

@@ -52,7 +52,7 @@ impl Display for Value {
             Value::Int(v) => write!(f, "{}", v),
             Value::Float(v) => write!(f, "{}", v),
             Value::Str(v) => write!(f, "\"{}\"", v),
-            Value::Sym(v) => write!(f, "{}", v),
+            Value::Sym(v) => write!(f, "{}", v.0),
             Value::Char(v) => write!(f, "(char \"{}\")", v),
             Value::Dict(v) => v.fmt(f),
             Value::Vec(v) => v.fmt(f),
@@ -66,7 +66,7 @@ impl Display for Value {
 impl Display for Pair {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut this = self;
-        write!(f, "'(")?;
+        write!(f, "(")?;
         let mut start = true;
         loop {
             match this {

@@ -6,6 +6,7 @@ pub mod native_math_operator;
 pub mod native_bool_operator;
 pub mod native_string_operator;
 pub mod native_dict_operator;
+pub mod to_literal;
 
 use lazy_static::lazy_static;
 
@@ -21,6 +22,7 @@ use native_math_operator::*;
 use native_string_operator::*;
 use native_bool_operator::*;
 use native_dict_operator::*;
+use to_literal::*;
 
 
 lazy_static! {
@@ -77,6 +79,8 @@ pub fn init() -> Handle<Scope> {
         set_wrap!(rcd, SET_VECTOR_NAME, SET_VECTOR_WRAP);
         set_wrap!(rcd, IGNORE_NAME, IGNORE_WRAP);
         set_wrap!(rcd, ID_NAME, ID_WRAP);
+        // to_str
+        set_wrap!(rcd, TO_STR_NAME, TO_STR_WRAP);
         // to_literal
         set_wrap!(rcd, LITERAL_NAME, LITERAL_WRAP);
         // eq ord
