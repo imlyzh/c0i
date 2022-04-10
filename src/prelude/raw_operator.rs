@@ -129,7 +129,7 @@ impl_wrap!(VECTOR_REDUCE_WRAP, VECTOR_REDUCE_NAME, set_vector, "vec-reduce", &LO
 
 fn set_vector(args: Vec<Value>) -> CResult {
     if args.len() != 3 {
-        return Err(CError::PrarmsIsNotMatching(2, args.len()));
+        return Err(CError::ArgsNotMatching(2, args.len()));
     }
     let vec = args.get(0).unwrap();
     let vec = if let Value::Vec(i) = vec {
