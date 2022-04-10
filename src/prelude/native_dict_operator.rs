@@ -12,7 +12,7 @@ use super::LOCATION;
 
 fn make_dict(args: Vec<Value>) -> CResult {
     if args.len() != 0 {
-        return Err(CError::PrarmsIsNotMatching(1, args.len()));
+        return Err(CError::ArgsNotMatching(1, args.len()));
     }
     Ok(Value::Dict(Dict::default()))
 }

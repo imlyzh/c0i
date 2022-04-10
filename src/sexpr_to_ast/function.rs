@@ -90,9 +90,9 @@ impl FromSexpr<List, Function> for Function {
         } else {
             let r = Function {
                 name: function_name.map(|x| x.unwrap()),
-                prarms,
-                extend_prarms: extend_prarms.map(|x| x.unwrap()),
-                bodys,
+                params: prarms,
+                extend_params: extend_prarms.map(|x| x.unwrap()),
+                body: bodys,
                 pos
             };
             Ok(r)

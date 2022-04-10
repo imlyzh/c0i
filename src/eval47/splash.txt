@@ -1,0 +1,23 @@
+   _____                               _
+  / ____|                             | |
+ | |      ___  _ __ ___    ___  _ __  | |_
+ | |     / _ \| '_ ` _ \  / _ \| '_ \ | __|
+ | |____|  __/| | | | | ||  __/| | | || |_
+  \_____|\___||_| |_| |_| \___||_| |_| \__|
+
+C047 - The Cement Bootstrap Compiler c0i with Pr47 backend
+  Repo    : github.com/imlyzh/c0i
+  License : The MIT License (MIT)
+  Authors : lyzh     github.com/imlyzh
+            Chuigda  github.com/chuigda
+            CousinZe github.com/CousinZe
+  Version : Core   0.1.2
+            C047   ALFA2
+            StdLib 0.0.1
+  Deps    : Pr47    0.1.4-ALFA (Git #cda4df5)
+            xjbutil 0.7.0
+  Build   : {} ({} build)
+
+This program is at very early stage of development. You may encounter bugs or
+poor experience. It's not recommended using it in production. Please report
+any bugs or feature requests with GitHub issue.

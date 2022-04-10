@@ -1,0 +1,7 @@
+(define (application-start)
+  (define (inner-function)
+    (display "second line\n")
+    (display "third line\n"))
+  (display "first line\n")
+  (spawn inner-function)
+  (display "last line\n"))

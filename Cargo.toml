@@ -1,6 +1,6 @@
 [package]
 name = "c0i"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["Lyzh <enterindex@gmail.com>"]
 edition = "2018"
 
@@ -10,6 +10,9 @@ edition = "2018"
 name = "c0i"
 path = "src/main.rs"
 
+[[bin]]
+name = "c047"
+path = "src/eval47/main.rs"
 
 [lib]
 name = "c0ilib"
@@ -20,5 +23,31 @@ name = "free_variables"
 path = "examples/free_variables.rs"
 
 [dependencies]
-lazy_static = "^1.4.*"
-sexpr_ir = { git="http://github.com/imlyzh/sexpr_ir" }
+build-time = "0.1.1"
+lazy_static = "1.4"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["fs"] }
+sexpr_ir = { git="https://github.com/imlyzh/sexpr_ir" }
+xjbutil = { version="0.7.0", default-features=false, features=[
+    "slice-arena",
+    "either",
+    "makro",
+    "korobka",
+    "value",
+    "value-serde",
+    "rand"
+] }
+
+    [dependencies.pr47]
+    git="https://github.com/Pr47/Pr47"
+    rev="cda4df5cb090e3e9a562524ed7c76e0dc76972d8"
+    default-features=false
+    features=[
+        "al31f",
+        "al31f-builtin-ops",
+        "optimized-rtlc",
+        "async",
+        "async-tokio",
+        "std47"
+    ]
