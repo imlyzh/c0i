@@ -34,7 +34,7 @@ impl FromSexpr<List, Function> for Function {
         let List(prarms, extend_prarms) = (*prarms).clone();
         let mut prarms = prarms.iter();
 
-        let function_name = if *def_headle == "defun" {
+        let function_name = if *def_headle == "define" {
             let name = prarms.next().ok_or_else(|| vec![incomplete_expr(&*i)])?;
             let name = symbol_from_sexpr(name);
             if let Err(e) = name.clone() {

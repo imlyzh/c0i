@@ -74,6 +74,7 @@ pub fn init() -> Handle<Scope> {
         set_wrap!(rcd, MAKE_DICT_NAME, MAKE_DICT);
         // set_wrap!(rcd, VECTOR_MAP_NAME, VECTOR_MAP_WRAP);
         set_wrap!(rcd, VECTOR_REDUCE_NAME, VECTOR_REDUCE_WRAP);
+        set_wrap!(rcd, SET_VECTOR_NAME, SET_VECTOR_WRAP);
         set_wrap!(rcd, IGNORE_NAME, IGNORE_WRAP);
         set_wrap!(rcd, ID_NAME, ID_WRAP);
         // to_literal

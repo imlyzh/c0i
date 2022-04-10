@@ -64,9 +64,17 @@ fn top_level_list_process(i: &List) -> Result<TopLevel, Vec<CompilerError>> {
         return Err(vec![CompilerError::BadSyntax(i.to_string())]);
     }
     match i.0.get(0).unwrap() {
+        /*
         GAst::Const(Constant::Sym(n)) if *n.0 == "define" => define_from_sexpr(i),
         GAst::Const(Constant::Sym(n)) if *n.0 == "defun" =>
             Function::from_sexpr(i).map(|f| TopLevel::Function(Handle::new(f))),
+         */
+        GAst::Const(Constant::Sym(n)) if *n.0 == "define" =>
+        if let Ok(f) = Function::from_sexpr(i){
+            Ok(TopLevel::Function(Handle::new(f)))
+        } else {
+            define_from_sexpr(i)
+        },
         GAst::Const(Constant::Sym(n)) if *n.0 == "quote" =>
             quote_from_sexpr(i).map(|v| TopLevel::Expr(Expr::Value(v))),
         _ => Expr::from_sexpr(&GAst::List(Handle::new(i.clone()))).map(TopLevel::Expr),

@@ -105,7 +105,7 @@ impl Display for Vector {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let r = self.0.read().unwrap()
         .iter()
-        .map(|x| x.read().unwrap().to_string())
+        .map(|x| x.to_string())
         .collect::<Vec<_>>();
         write!(f, "(vec {})", r.join(" "))
     }
@@ -161,12 +161,12 @@ impl PartialEq for Dict {
 }
 
 #[derive(Debug, Clone)]
-pub struct Vector(pub Arc<RwLock<Vec<RwLock<Value>>>>);
+pub struct Vector(pub Arc<RwLock<Vec<Value>>>);
 
 impl PartialEq for Vector {
     fn eq(&self, other: &Self) -> bool {
         self.0.read().unwrap().iter().zip(other.0.read().unwrap().iter())
-            .map(|(a, b)| *a.read().unwrap() == *b.read().unwrap())
+            .map(|(a, b)| *a == *b)
             .reduce(|a, b| a && b).map_or(false, identity)
     }
 }

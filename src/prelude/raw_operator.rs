@@ -71,7 +71,7 @@ impl_wrap!(CONS_WRAP, CONS_NAME, cons, "cons", &LOCATION);
 
 fn vector(args: Vec<Value>) -> CResult {
     Ok(Value::Vec(Vector(Handle::new(RwLock::new(
-        args.into_iter().map(|x| RwLock::new(x)).collect())))))
+        args)))))
 }
 
 impl_wrap!(VECTOR_WRAP, VECTOR_NAME, vector, "make-vector", &LOCATION);
@@ -121,11 +121,34 @@ fn vector_reduce(args: Vec<Value>) -> CResult {
     };
     let iter = vector.0.read().unwrap();
     let mut iter = iter.iter();
-    let init = iter.next().map_or(Value::Nil, |x| x.read().unwrap().clone());
-    iter.try_fold(init, |x, y| callable.call(&[x, y.read().unwrap().clone()]))
+    let init = iter.next().map_or(Value::Nil, |x| x.clone());
+    iter.try_fold(init, |x, y| callable.call(&[x, y.clone()]))
 }
 
-impl_wrap!(VECTOR_REDUCE_WRAP, VECTOR_REDUCE_NAME, vector_reduce, "vector-reduce", &LOCATION);
+impl_wrap!(VECTOR_REDUCE_WRAP, VECTOR_REDUCE_NAME, set_vector, "vec-reduce", &LOCATION);
+
+fn set_vector(args: Vec<Value>) -> CResult {
+    if args.len() != 3 {
+        return Err(CError::PrarmsIsNotMatching(2, args.len()));
+    }
+    let vec = args.get(0).unwrap();
+    let vec = if let Value::Vec(i) = vec {
+        i
+    } else {
+        return Err(CError::TypeError((), vec.clone()));
+    };
+    let index = args.get(1).unwrap();
+    let index = if let Value::Uint(i) = index {
+        *i
+    } else {
+        return Err(CError::TypeError((), index.clone()));
+    };
+    let value = args.get(2).unwrap();
+    vec.0.write().unwrap().insert(index as usize, value.clone());
+    Ok(Value::Nil)
+}
+
+impl_wrap!(SET_VECTOR_WRAP, SET_VECTOR_NAME, set_vector, "set-vec!", &LOCATION);
 
 
 fn id(args: Vec<Value>) -> CResult {
