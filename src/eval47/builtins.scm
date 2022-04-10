@@ -1,37 +1,37 @@
-(defun (stdlib-version) (vector 0 0 1))
+(define (stdlib-version) (vector 0 0 1))
 
-(defun (unused x) x)
+(define (unused x) x)
 
-(defun (unimplemented) (raise "unimplemented"))
+(define (unimplemented) (raise "unimplemented"))
 
-(defun (--pr47-builtin-cons fst snd) (vector fst snd))
+(define (--pr47-builtin-cons fst snd) (vector fst snd))
 
-(defun (cons x y) (--pr47-builtin-cons x y))
+(define (cons x y) (--pr47-builtin-cons x y))
 
-(defun (car x) (vector-ref x 0))
-(defun (cdr x) (vector-ref x 1))
-(defun (set-car! x value) (vector-set! x 0 value))
-(defun (set-cdr! x value) (vector-set! x 1 value))
+(define (car x) (vector-ref x 0))
+(define (cdr x) (vector-ref x 1))
+(define (set-car! x value) (vector-set! x 0 value))
+(define (set-cdr! x value) (vector-set! x 1 value))
 
-(defun (list-length list)
-  (defun (list-length-impl list n)
+(define (list-length list)
+  (define (list-length-impl list n)
     (cond ((= nil list) n)
           (else (list-length-impl (cdr list) (+ n 1)))))
   (list-length-impl list 0))
 
-(defun (list-ref list n)
-  (defun (list-ref-impl list n)
+(define (list-ref list n)
+  (define (list-ref-impl list n)
     (cond ((= n 0) (car list))
           (else (list-ref-impl (cdr list) (- n 1)))))
   (cond ((>= n (list-length list)) (raise "IndexOutOfBounds"))
         (else (list-ref-impl list n))))
 
-(defun (map f list)
+(define (map f list)
   (cond ((= nil list) nil)
         (else (cons (f (car list)) (map f (cdr list))))))
 
-(defun (display-list list)
-  (defun (display-list-impl list)
+(define (display-list list)
+  (define (display-list-impl list)
     (cond ((= nil (cdr list)) (display (car list)))
           (else
             (begin
