@@ -131,9 +131,10 @@ pub fn init() -> Handle<Scope> {
         // stdio
         set_wrap!(rcd, READ_STDIN_NAME, READ_STDIN_WRAP);
         set_wrap!(rcd, READ_LINE_NAME, READ_LINE_WRAP);
-        // file io
+
         set_wrap!(rcd, DISPLAY_NAME, DISPLAY_WRAP);
         set_wrap!(rcd, DISPLAYLN_NAME, DISPLAYLN_WRAP);
+        // file io
         set_wrap!(rcd, FILE_TO_STRING_NAME, FILE_TO_STRING_WRAP);
         set_wrap!(rcd, WRITE_FILE_NAME, WRITE_FILE_WRAP);
     }

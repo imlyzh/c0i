@@ -57,7 +57,7 @@ fn displayln(args: Vec<Value>) -> CResult {
 }
 
 impl_wrap!(DISPLAY_WRAP, DISPLAY_NAME, display, "display", &LOCATION);
-impl_wrap!(DISPLAYLN_WRAP, DISPLAYLN_NAME, display, "displayln", &LOCATION);
+impl_wrap!(DISPLAYLN_WRAP, DISPLAYLN_NAME, displayln, "displayln", &LOCATION);
 
 
 fn file_to_string(args: Vec<Value>) -> CResult {
