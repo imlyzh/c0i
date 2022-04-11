@@ -1,4 +1,5 @@
 pub mod error;
+pub mod to_literal;
 pub mod raw_operator;
 pub mod native_eq_ord_operator;
 pub mod dynamic_type_check;
@@ -6,7 +7,7 @@ pub mod native_math_operator;
 pub mod native_bool_operator;
 pub mod native_string_operator;
 pub mod native_dict_operator;
-pub mod to_literal;
+pub mod io_operator;
 
 use lazy_static::lazy_static;
 
@@ -15,6 +16,7 @@ use sexpr_ir::gast::{Handle, symbol::Location};
 use crate::value::{Value, callable::Callable, scope::Scope};
 
 use error::*;
+use to_literal::*;
 use raw_operator::*;
 use native_eq_ord_operator::*;
 use dynamic_type_check::*;
@@ -22,7 +24,7 @@ use native_math_operator::*;
 use native_string_operator::*;
 use native_bool_operator::*;
 use native_dict_operator::*;
-use to_literal::*;
+use io_operator::*;
 
 
 lazy_static! {
@@ -125,6 +127,15 @@ pub fn init() -> Handle<Scope> {
         set_wrap!(rcd, IS_DICT_NAME, IS_DICT_WRAP);
         set_wrap!(rcd, IS_VEC_NAME, IS_VEC_WRAP);
         set_wrap!(rcd, IS_CALLABLE_NAME, IS_CALLABLE_WRAP);
+
+        // stdio
+        set_wrap!(rcd, READ_STDIN_NAME, READ_STDIN_WRAP);
+        set_wrap!(rcd, READ_LINE_NAME, READ_LINE_WRAP);
+        // file io
+        set_wrap!(rcd, DISPLAY_NAME, DISPLAY_WRAP);
+        set_wrap!(rcd, DISPLAYLN_NAME, DISPLAYLN_WRAP);
+        set_wrap!(rcd, FILE_TO_STRING_NAME, FILE_TO_STRING_WRAP);
+        set_wrap!(rcd, WRITE_FILE_NAME, WRITE_FILE_WRAP);
     }
     record
 }

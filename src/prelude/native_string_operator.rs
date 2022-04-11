@@ -33,7 +33,7 @@ fn to_str(args: Vec<Value>) -> CResult {
     Ok(Value::Str(Handle::new(r)))
 }
 
-impl_wrap!(TO_STR_WRAP, TO_STR_NAME, to_str, "->str", &LOCATION);
+impl_wrap!(TO_STR_WRAP, TO_STR_NAME, to_str, "->string", &LOCATION);
 
 
 // impl_wrap!(LITERAL_WRAP, LITERAL_NAME, to_str, "->str", &LOCATION);
