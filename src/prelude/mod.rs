@@ -1,3 +1,4 @@
+pub mod autobind;
 pub mod error;
 pub mod to_literal;
 pub mod raw_operator;

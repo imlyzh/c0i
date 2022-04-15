@@ -23,6 +23,110 @@ pub enum Value {
     Callable(Callable),
 }
 
+macro_rules! impl_value_from {
+    ($t:ty, $variant:ident) => {
+        impl From<$t> for Value {
+            fn from(v: $t) -> Self {
+                Value::$variant(v)
+            }
+        }
+    };
+}
+
+macro_rules! impl_value_from_non_handle {
+    ($t:ty, $variant:ident) => {
+        impl From<$t> for Value {
+            fn from(v: $t) -> Self {
+                Value::$variant(Handle::new(v))
+            }
+        }
+    };
+}
+
+impl From<()> for Value {
+    fn from(_: ()) -> Self {
+        Value::Nil
+    }
+}
+
+impl_value_from!(bool, Bool);
+impl_value_from!(char, Char);
+impl_value_from!(u64, Uint);
+impl_value_from!(i64, Int);
+impl_value_from!(f64, Float);
+impl_value_from!(Handle<String>, Str);
+impl_value_from!(Handle<Symbol>, Sym);
+impl_value_from!(Handle<Pair>, Pair);
+impl_value_from!(Dict, Dict);
+impl_value_from!(Vector, Vec);
+impl_value_from!(Callable, Callable);
+
+impl_value_from_non_handle!(String, Str);
+impl_value_from_non_handle!(Symbol, Sym);
+impl_value_from_non_handle!(Pair, Pair);
+
+impl From<HashMap<Handle<String>, Value>> for Value {
+    fn from(v: HashMap<Handle<String>, Value>) -> Self {
+        Value::Dict(Dict(Arc::new(RwLock::new(v))))
+    }
+}
+
+impl From<Vec<Value>> for Value {
+    fn from(v: Vec<Value>) -> Self {
+        Value::Vec(Vector(Arc::new(RwLock::new(v))))
+    }
+}
+
+macro_rules! impl_value_try_into {
+    ($t:ty, $variant:ident) => {
+        impl std::convert::TryInto<$t> for Value {
+            type Error = $crate::value::result::CError;
+
+            fn try_into(self) -> Result<$t, Self::Error> {
+                match self {
+                    Value::$variant(v) => Ok(v),
+                    _ => Err(
+                        $crate::value::result::CError::TypeError((), self)
+                    )
+                }
+            }
+        }
+    };
+}
+
+macro_rules! impl_value_try_into_strip_handle {
+    ($t:ty, $variant:ident) => {
+        impl std::convert::TryInto<$t> for Value {
+            type Error = $crate::value::result::CError;
+
+            fn try_into(self) -> Result<$t, Self::Error> {
+                match self {
+                    Value::$variant(v) => Ok((*v).clone()),
+                    _ => Err(
+                        $crate::value::result::CError::TypeError((), self)
+                    )
+                }
+            }
+        }
+    };
+}
+
+impl_value_try_into!(bool, Bool);
+impl_value_try_into!(char, Char);
+impl_value_try_into!(u64, Uint);
+impl_value_try_into!(i64, Int);
+impl_value_try_into!(f64, Float);
+impl_value_try_into!(Handle<String>, Str);
+impl_value_try_into!(Handle<Symbol>, Sym);
+impl_value_try_into!(Handle<Pair>, Pair);
+impl_value_try_into!(Dict, Dict);
+impl_value_try_into!(Vector, Vec);
+impl_value_try_into!(Callable, Callable);
+
+impl_value_try_into_strip_handle!(String, Str);
+impl_value_try_into_strip_handle!(Symbol, Sym);
+impl_value_try_into_strip_handle!(Pair, Pair);
+
 impl PartialOrd for Value {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         match (self, other) {

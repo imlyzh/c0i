@@ -5,6 +5,8 @@ mod sexpr_to_ast;
 mod value;
 mod prelude;
 
+pub use prelude::autobind;
+
 use std::io::{stdin, stdout, Write};
 use std::process::exit;
 
