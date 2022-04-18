@@ -190,6 +190,6 @@ impl Eval for Function {
     fn eval(&self, env: &Handle<Scope>) -> CResult {
         let env = env.new_level(SimpleScope::new());
         let r = Closure(self.clone(), Some(env));
-        Ok(Value::Callable(Callable::Closure(Handle::new(r))))
+        Ok(Value::Callable(Callable::Closure(r)))
     }
 }

@@ -12,20 +12,20 @@ use super::Value;
 #[derive(Debug, Clone)]
 pub struct Closure(pub Function, pub Option<Handle<Scope>>);
 
-type NativeInterface = fn(Vec<Value>) -> CResult;
+pub type NativeInterface = fn(Vec<Value>) -> CResult;
 
 #[derive(Debug, Clone)]
 pub struct NativeFunction {
-    pub name: Handle<Symbol>,
+    pub name: &'static str,
+    pub from_module: &'static str,
     pub is_pure: bool,
-    pub type_sign: (),
     pub interface: NativeInterface,
 }
 
 #[derive(Debug, Clone)]
 pub enum Callable {
-    Closure(Handle<Closure>),
-    Native(Handle<NativeFunction>),
+    Closure(Closure),
+    Native(NativeFunction),
 }
 
 impl PartialEq for Callable {

@@ -46,7 +46,7 @@ impl Display for CError {
                 writeln!(f, "ArgsMatchingError: this function takes {} arguments but {} argument was supplied.",
                     a, b),
             CError::TypeError(e, v) =>
-                writeln!(f, "TypeError: {} is not {:?} type.", v, e),
+                writeln!(f, "TypeError: {:?} is not {:?} type.", v, e),
             CError::ZeroDivisionError => writeln!(f, "ZeroDivisionError."),
             CError::RuntimeError(e) => if let Some(e) = e {
                 writeln!(f, "RuntimeError: {}.", e)

@@ -1,15 +1,8 @@
-use lazy_static::lazy_static;
-
-use sexpr_ir::gast::{Handle, symbol::Symbol};
-
-use crate::impl_wrap;
-use crate::value::Value;
-use crate::value::callable::NativeFunction;
-use crate::value::result::{CResult, CError};
+use sexpr_ir::gast::Handle;
 
 use crate::value::Pair;
-
-use super::LOCATION;
+use crate::value::Value;
+use crate::value::result::{CResult, CError};
 
 
 impl Value {
@@ -70,12 +63,10 @@ impl Pair {
     }
 }
 
-fn literal(args: Vec<Value>) -> CResult {
+pub(crate) fn literal(args: Vec<Value>) -> CResult {
     if args.len() != 1 {
         return Err(CError::ArgsNotMatching(1, args.len()));
     }
     let r = args.get(0).unwrap().to_string();
     Ok(Value::Str(Handle::new(r)))
 }
-
-impl_wrap!(LITERAL_WRAP, LITERAL_NAME, literal, "literal", &LOCATION);

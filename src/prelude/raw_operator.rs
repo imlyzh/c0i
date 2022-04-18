@@ -1,15 +1,11 @@
 use std::sync::RwLock;
 
-use lazy_static::lazy_static;
+use sexpr_ir::{gast::Handle, syntax::sexpr::parse};
 
-use sexpr_ir::{gast::{Handle, symbol::Symbol}, syntax::sexpr::parse};
-
-use crate::{evaluation::call::Call, impl_wrap, sexpr_to_ast::quote::value_from_sexpr, value::{Pair, Value, Vector, callable::NativeFunction, result::{CError, CResult}}};
-
-use super::LOCATION;
+use crate::{evaluation::call::Call, sexpr_to_ast::quote::value_from_sexpr, value::{Pair, Value, Vector, result::{CError, CResult}}};
 
 
-fn read(args: Vec<Value>) -> CResult {
+pub(crate) fn read(args: Vec<Value>) -> CResult {
     if args.len() != 1 {
         return Err(CError::ArgsNotMatching(1, args.len()));
     }
@@ -25,9 +21,7 @@ fn read(args: Vec<Value>) -> CResult {
     }
 }
 
-impl_wrap!(READ_WRAP, READ_NAME, read, "read", &LOCATION);
-
-fn car(args: Vec<Value>) -> CResult {
+pub(crate) fn car(args: Vec<Value>) -> CResult {
     if args.len() != 1 {
         return Err(CError::ArgsNotMatching(1, args.len()));
     }
@@ -39,10 +33,7 @@ fn car(args: Vec<Value>) -> CResult {
     }
 }
 
-impl_wrap!(CAR_WRAP, CAR_NAME, car, "car", &LOCATION);
-
-
-fn cdr(args: Vec<Value>) -> CResult {
+pub(crate) fn cdr(args: Vec<Value>) -> CResult {
     if args.len() != 1 {
         return Err(CError::ArgsNotMatching(1, args.len()));
     }
@@ -54,10 +45,7 @@ fn cdr(args: Vec<Value>) -> CResult {
     }
 }
 
-impl_wrap!(CDR_WRAP, CDR_NAME, cdr, "cdr", &LOCATION);
-
-
-fn cons(args: Vec<Value>) -> CResult {
+pub(crate) fn cons(args: Vec<Value>) -> CResult {
     if args.len() != 2 {
         return Err(CError::ArgsNotMatching(2, args.len()));
     }
@@ -66,15 +54,10 @@ fn cons(args: Vec<Value>) -> CResult {
             args.get(1).unwrap().clone()))))
 }
 
-impl_wrap!(CONS_WRAP, CONS_NAME, cons, "cons", &LOCATION);
-
-
-fn vector(args: Vec<Value>) -> CResult {
+pub(crate) fn vector(args: Vec<Value>) -> CResult {
     Ok(Value::Vec(Vector(Handle::new(RwLock::new(
         args)))))
 }
-
-impl_wrap!(VECTOR_WRAP, VECTOR_NAME, vector, "make-vector", &LOCATION);
 
 /*
 fn vector_map(args: Vec<Value>) -> CResult {
@@ -104,7 +87,7 @@ impl_wrap!(VECTOR_MAP_WRAP, VECTOR_MAP_NAME, vector_map, "vector-map", &LOCATION
  */
 
 #[allow(dead_code)]
-fn vector_reduce(args: Vec<Value>) -> CResult {
+pub(crate) fn vector_reduce(args: Vec<Value>) -> CResult {
     if args.len() != 2 {
         return Err(CError::ArgsNotMatching(2, args.len()));
     }
@@ -126,9 +109,7 @@ fn vector_reduce(args: Vec<Value>) -> CResult {
     iter.try_fold(init, |x, y| callable.call(&[x, y.clone()]))
 }
 
-impl_wrap!(VECTOR_REDUCE_WRAP, VECTOR_REDUCE_NAME, set_vector, "vec-reduce", &LOCATION);
-
-fn set_vector(args: Vec<Value>) -> CResult {
+pub(crate) fn set_vector(args: Vec<Value>) -> CResult {
     if args.len() != 3 {
         return Err(CError::ArgsNotMatching(2, args.len()));
     }
@@ -149,21 +130,13 @@ fn set_vector(args: Vec<Value>) -> CResult {
     Ok(Value::Nil)
 }
 
-impl_wrap!(SET_VECTOR_WRAP, SET_VECTOR_NAME, set_vector, "set-vec!", &LOCATION);
-
-
-fn id(args: Vec<Value>) -> CResult {
+pub(crate) fn id(args: Vec<Value>) -> CResult {
     if args.len() != 1 {
         return Err(CError::ArgsNotMatching(1, args.len()));
     }
     Ok(args.get(0).unwrap().clone())
 }
 
-impl_wrap!(ID_WRAP, ID_NAME, id, "id", &LOCATION);
-
-
-fn ignore(_args: Vec<Value>) -> CResult {
+pub(crate) fn ignore(_args: Vec<Value>) -> CResult {
     Ok(Value::Nil)
 }
-
-impl_wrap!(IGNORE_WRAP, IGNORE_NAME, ignore, "ignore", &LOCATION);

@@ -11,8 +11,8 @@ use sexpr_ir::syntax::sexpr::parse;
 use xjbutil::std_ext::ResultExt;
 use xjbutil::unchecked::UncheckedSendSync;
 
-use c0ilib::ast::TopLevel;
-use c0ilib::eval47::builtins::{
+use c0i::ast::TopLevel;
+use c0i::eval47::builtins::{
     DISPLAY_BIND,
     INT_TO_STRING_BIND,
     PARSE_INT_BIND,
@@ -21,11 +21,11 @@ use c0ilib::eval47::builtins::{
     SPLIT_BIND,
     TO_CHAR_ARRAY_BIND
 };
-use c0ilib::eval47::commons::CompiledProgram;
-use c0ilib::eval47::compile::CompileContext;
-use c0ilib::eval47::min_scope_analysis::AnalyseContext;
-use c0ilib::eval47::util::{bitcast_i64_usize, read_to_string_trim_comments};
-use c0ilib::sexpr_to_ast::FromSexpr;
+use c0i::eval47::commons::CompiledProgram;
+use c0i::eval47::compile::CompileContext;
+use c0i::eval47::min_scope_analysis::AnalyseContext;
+use c0i::eval47::util::{bitcast_i64_usize, read_to_string_trim_comments};
+use c0i::sexpr_to_ast::FromSexpr;
 
 const BUILTINS: &'static str = include_str!("./builtins.scm");
 

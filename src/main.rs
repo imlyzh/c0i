@@ -5,7 +5,8 @@ mod sexpr_to_ast;
 mod value;
 mod prelude;
 
-pub use prelude::autobind;
+use std::collections::HashMap;
+pub use c0i::value::autobind;
 
 use std::io::{stdin, stdout, Write};
 use std::process::exit;
@@ -13,14 +14,10 @@ use std::process::exit;
 use prelude::init;
 use evaluation::{Eval, load_file};
 use sexpr_ir::gast::Handle;
-use sexpr_ir::syntax::sexpr::{
-    // file_parse,
-    repl_parse
-};
+use sexpr_ir::syntax::sexpr::repl_parse;
 use sexpr_to_ast::FromSexpr;
 
 use ast::TopLevel;
-// use value::result::CError;
 use value::scope::Scope;
 
 fn start_repl(env: &Handle<Scope>) -> ! {
@@ -57,22 +54,43 @@ fn start_repl(env: &Handle<Scope>) -> ! {
 }
 
 use std::env;
+use libloading::{Library, Symbol};
+
+type NativeModuleLoadFn = fn(
+    &mut HashMap<Handle<crate::value::Symbol>, crate::value::Value>
+);
 
 fn main() {
-    let env = init();
-    /*
-    let std_list = [
-        "./scripts/functools.sexpr"
-    ];
-     */
     let mut args = env::args();
     args.next();
+    let args = args.collect::<Vec<_>>();
 
-    args.for_each(|i| {
-        let r = load_file(&i, &env);
-        if let Err(e) = r {
-            println!("error: {:?}", e);
+    let env = if args.iter().any(|x| x == "--no-builtins") {
+        Scope::new()
+    } else {
+        init()
+    };
+
+    let mut loaded_libraries = Vec::new();
+    for arg in args {
+        if arg.starts_with("--") {
+            continue;
         }
-    });
+
+        if arg.ends_with(".so") || arg.ends_with(".dll") {
+            unsafe {
+                let lib = Library::new(arg).unwrap();
+                let sym: Symbol<NativeModuleLoadFn> = lib.get(b"load_module").unwrap();
+                (sym)(&mut env.this_level.0.write().unwrap());
+
+                loaded_libraries.push(lib);
+            }
+        } else {
+            let r = load_file(&arg, &env);
+            if let Err(e) = r {
+                println!("error loading file {}: {:?}", arg, e);
+            }
+        }
+    }
     start_repl(&env);
 }
