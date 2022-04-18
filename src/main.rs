@@ -71,6 +71,7 @@ fn main() {
         init()
     };
 
+    let mut loaded_libraries = Vec::new();
     for arg in args {
         if arg.starts_with("--") {
             continue;
@@ -81,6 +82,8 @@ fn main() {
                 let lib = Library::new(arg).unwrap();
                 let sym: Symbol<NativeModuleLoadFn> = lib.get(b"load_module").unwrap();
                 (sym)(&mut env.this_level.0.write().unwrap());
+
+                loaded_libraries.push(lib);
             }
         } else {
             let r = load_file(&arg, &env);
