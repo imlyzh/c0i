@@ -5,7 +5,9 @@ pub mod scope;
 use std::{collections::HashMap, convert::identity, fmt::Display, sync::{Arc, RwLock}};
 
 use callable::Callable;
-use sexpr_ir::gast::{symbol::Symbol, Handle};
+use sexpr_ir::gast::Handle;
+
+pub use sexpr_ir::gast::symbol::Symbol;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Value {

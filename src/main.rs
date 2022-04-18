@@ -14,14 +14,10 @@ use std::process::exit;
 use prelude::init;
 use evaluation::{Eval, load_file};
 use sexpr_ir::gast::Handle;
-use sexpr_ir::syntax::sexpr::{
-    // file_parse,
-    repl_parse
-};
+use sexpr_ir::syntax::sexpr::repl_parse;
 use sexpr_to_ast::FromSexpr;
 
 use ast::TopLevel;
-// use value::result::CError;
 use value::scope::Scope;
 
 fn start_repl(env: &Handle<Scope>) -> ! {
@@ -77,7 +73,7 @@ fn main() {
 
     for arg in args {
         if arg.starts_with("--") {
-            return;
+            continue;
         }
 
         if arg.ends_with(".so") || arg.ends_with(".dll") {
