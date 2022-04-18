@@ -60,15 +60,14 @@ use std::env;
 
 fn main() {
     let env = init();
-    /*
-    let std_list = [
-        "./scripts/functools.sexpr"
-    ];
-     */
     let mut args = env::args();
     args.next();
 
     args.for_each(|i| {
+        if i.starts_with("--") {
+            return;
+        }
+
         let r = load_file(&i, &env);
         if let Err(e) = r {
             println!("error: {:?}", e);

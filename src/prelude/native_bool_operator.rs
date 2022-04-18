@@ -1,16 +1,8 @@
-use lazy_static::lazy_static;
-
-use sexpr_ir::gast::{Handle, symbol::Symbol};
-
-use crate::impl_wrap;
 use crate::value::Value;
-use crate::value::callable::NativeFunction;
 use crate::value::result::{CResult, CError};
 
-use super::LOCATION;
 
-
-fn native_bool_not(args: Vec<Value>) -> CResult {
+pub(crate) fn native_bool_not(args: Vec<Value>) -> CResult {
     if args.len() != 1 {
         return Err(CError::ArgsNotMatching(1, args.len()));
     }
@@ -22,10 +14,7 @@ fn native_bool_not(args: Vec<Value>) -> CResult {
     }
 }
 
-impl_wrap!(BOOL_NOT_WRAP, BOOL_NOT_NAME, native_bool_not, "not", &LOCATION);
-
-
-fn native_bool_and(args: Vec<Value>) -> CResult {
+pub(crate) fn native_bool_and(args: Vec<Value>) -> CResult {
     if args.len() != 2 {
         return Err(CError::ArgsNotMatching(1, args.len()));
     }
@@ -43,10 +32,7 @@ fn native_bool_and(args: Vec<Value>) -> CResult {
     }
 }
 
-impl_wrap!(BOOL_AND_WRAP, BOOL_AND_NAME, native_bool_and, "raw-and", &LOCATION);
-
-
-fn native_bool_or(args: Vec<Value>) -> CResult {
+pub(crate) fn native_bool_or(args: Vec<Value>) -> CResult {
     if args.len() != 2 {
         return Err(CError::ArgsNotMatching(1, args.len()));
     }
@@ -63,5 +49,3 @@ fn native_bool_or(args: Vec<Value>) -> CResult {
         Err(CError::TypeError((), b.clone()))
     }
 }
-
-impl_wrap!(BOOL_OR_WRAP, BOOL_OR_NAME, native_bool_or, "raw-or", &LOCATION);

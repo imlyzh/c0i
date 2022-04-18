@@ -1,21 +1,12 @@
-
 use std::fs::File;
 use std::io::{stdout, Write, stdin, Read};
 
-use lazy_static::lazy_static;
+use sexpr_ir::gast::Handle;
 
-use sexpr_ir::gast::{Handle, symbol::Symbol};
-
-use crate::impl_wrap;
 use crate::value::Value;
-use crate::value::callable::NativeFunction;
 use crate::value::result::{CResult, CError};
 
-use super::LOCATION;
-
-
-
-fn read_stdin(args: Vec<Value>) -> CResult {
+pub(crate) fn read_stdin(args: Vec<Value>) -> CResult {
     if args.len() != 0 {
         return Err(CError::ArgsNotMatching(1, args.len()));
     }
@@ -24,7 +15,7 @@ fn read_stdin(args: Vec<Value>) -> CResult {
     Ok(Value::Str(Handle::new(r)))
 }
 
-fn read_line(args: Vec<Value>) -> CResult {
+pub(crate) fn read_line(args: Vec<Value>) -> CResult {
     if args.len() != 0 {
         return Err(CError::ArgsNotMatching(1, args.len()));
     }
@@ -33,11 +24,7 @@ fn read_line(args: Vec<Value>) -> CResult {
     Ok(Value::Str(Handle::new(r)))
 }
 
-impl_wrap!(READ_STDIN_WRAP, READ_STDIN_NAME, read_stdin, "read-stdin", &LOCATION);
-impl_wrap!(READ_LINE_WRAP, READ_LINE_NAME, read_line, "read-line", &LOCATION);
-
-
-fn display(args: Vec<Value>) -> CResult {
+pub(crate) fn display(args: Vec<Value>) -> CResult {
     if args.len() != 1 {
         return Err(CError::ArgsNotMatching(1, args.len()));
     }
@@ -47,7 +34,7 @@ fn display(args: Vec<Value>) -> CResult {
     Ok(Value::Nil)
 }
 
-fn displayln(args: Vec<Value>) -> CResult {
+pub(crate) fn displayln(args: Vec<Value>) -> CResult {
     if args.len() != 1 {
         return Err(CError::ArgsNotMatching(1, args.len()));
     }
@@ -56,11 +43,7 @@ fn displayln(args: Vec<Value>) -> CResult {
     Ok(Value::Nil)
 }
 
-impl_wrap!(DISPLAY_WRAP, DISPLAY_NAME, display, "display", &LOCATION);
-impl_wrap!(DISPLAYLN_WRAP, DISPLAYLN_NAME, displayln, "displayln", &LOCATION);
-
-
-fn file_to_string(args: Vec<Value>) -> CResult {
+pub(crate) fn file_to_string(args: Vec<Value>) -> CResult {
     if args.len() != 1 {
         return Err(CError::ArgsNotMatching(1, args.len()));
     }
@@ -82,7 +65,7 @@ fn file_to_string(args: Vec<Value>) -> CResult {
 }
 
 /*
-fn file_to_lines(args: Vec<Value>) -> CResult {
+pub(crate) fn file_to_lines(args: Vec<Value>) -> CResult {
     if args.len() != 1 {
         return Err(CError::ArgsNotMatching(1, args.len()));
     }
@@ -104,11 +87,7 @@ fn file_to_lines(args: Vec<Value>) -> CResult {
 }
  */
 
-impl_wrap!(FILE_TO_STRING_WRAP, FILE_TO_STRING_NAME, file_to_string, "file->string", &LOCATION);
-// impl_wrap!(FILE_TO_LINES_WRAP, FILE_TO_LINES_NAME, file_to_lines, "file-lines", &LOCATION);
-
-
-fn write_file(args: Vec<Value>) -> CResult {
+pub(crate) fn write_file(args: Vec<Value>) -> CResult {
     if args.len() != 2 {
         return Err(CError::ArgsNotMatching(1, args.len()));
     }
@@ -132,5 +111,3 @@ fn write_file(args: Vec<Value>) -> CResult {
     }
     Ok(Value::Nil)
 }
-
-impl_wrap!(WRITE_FILE_WRAP, WRITE_FILE_NAME, write_file, "write-file", &LOCATION);

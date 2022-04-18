@@ -1,7 +1,13 @@
+use std::collections::HashMap;
 use std::convert::{Infallible, TryInto};
 
+use sexpr_ir::gast::Handle;
+use sexpr_ir::gast::symbol::{Location, Symbol};
+
 use crate::value::Value;
+use crate::value::callable::{Callable, NativeFunction, NativeInterface};
 use crate::value::result::{CError, CResult};
+
 
 pub trait RustCallable<TS, R, E> {
     fn call(&self, args: Vec<Value>) -> CResult;
@@ -134,4 +140,54 @@ macro_rules! bind_rust_callable {
             $crate::prelude::autobind::RustCallable::call(&$fn_name, args)
         }
     };
+}
+
+fn scope_register_rust_callable(
+    locked_scope: &mut HashMap<Handle<Symbol>, Value>,
+    location: Location,
+    module_name: &'static str,
+    registered_name: &'static str,
+    bound_fn: NativeInterface
+) {
+    let symbol = Handle::new(
+        Symbol(
+            Handle::new(registered_name.to_string()),
+            location.clone()
+        )
+    );
+
+    if locked_scope.contains_key(&symbol) {
+        panic!("Symbol `{}` already registered", registered_name);
+    }
+
+    locked_scope.insert(
+        symbol,
+        Value::Callable(
+            Callable::Native(
+                NativeFunction {
+                    name: registered_name,
+                    from_module: module_name,
+                    is_pure: true,
+                    interface: bound_fn
+                }
+            )
+        )
+    );
+}
+
+pub fn scope_register_module(
+    locked_scope: &mut HashMap<Handle<Symbol>, Value>,
+    module_name: &'static str,
+    registered_functions: &[(&'static str, NativeInterface)]
+) {
+    let location = Location::new(Handle::new(String::from(module_name)), 0, 0, 0);
+    for (registered_name, bound_fn) in registered_functions {
+        scope_register_rust_callable(
+            locked_scope,
+            location.clone(),
+            module_name,
+            registered_name,
+            *bound_fn
+        );
+    }
 }

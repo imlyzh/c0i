@@ -138,8 +138,8 @@ impl PartialOrd for Value {
             (Value::Float(a), Value::Float(b)) => a.partial_cmp(b),
             (Value::Str(a), Value::Str(b)) => a.partial_cmp(b),
             (Value::Sym(a), Value::Sym(b)) => a.0.partial_cmp(&b.0),
-            (Value::Pair(_a), Value::Pair(_b)) => None,
-            (Value::Dict(_a), Value::Dict(_b)) => None,
+            (Value::Pair(_), Value::Pair(_)) => None,
+            (Value::Dict(_), Value::Dict(_)) => None,
             (Value::Vec(a), Value::Vec(b)) => a.partial_cmp(b),
             _ => None,
         }
