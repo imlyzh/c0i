@@ -1,6 +1,7 @@
 pub mod callable;
 pub mod result;
 pub mod scope;
+pub mod autobind;
 
 use std::{collections::HashMap, convert::identity, fmt::Display, sync::{Arc, RwLock}};
 

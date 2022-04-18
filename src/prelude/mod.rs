@@ -1,4 +1,3 @@
-pub mod autobind;
 pub mod error;
 pub mod to_literal;
 pub mod raw_operator;
@@ -23,7 +22,7 @@ use native_bool_operator::*;
 use native_dict_operator::*;
 use io_operator::*;
 
-use crate::prelude::autobind::scope_register_module;
+use crate::value::autobind::scope_register_module;
 use crate::value::scope::Scope;
 
 pub fn init() -> Handle<Scope> {

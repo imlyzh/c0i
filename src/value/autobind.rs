@@ -131,13 +131,13 @@ impl_rust_callable_exc!(12, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12);
 #[macro_export]
 macro_rules! bind_rust_callable {
     ($fn_name:ident, $bound_fn_name:ident) => {
-        fn $bound_fn_name(args: Vec<Value>) -> CResult {
-            $crate::prelude::autobind::RustCallable::call(&$fn_name, args)
+        fn $bound_fn_name(args: Vec<$crate::value::Value>) -> $crate::value::result::CResult {
+            $crate::value::autobind::RustCallable::call(&$fn_name, args)
         }
     };
     ($vis:vis, $fn_name:ident, $bound_fn_name:ident) => {
-        $vis fn $bound_fn_name(args: Vec<Value>) -> CResult {
-            $crate::prelude::autobind::RustCallable::call(&$fn_name, args)
+        $vis fn $bound_fn_name(args: Vec<$crate::value::Value>) -> $crate::value::result::CResult {
+            $crate::value::autobind::RustCallable::call(&$fn_name, args)
         }
     };
 }

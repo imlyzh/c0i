@@ -6,7 +6,7 @@ mod value;
 mod prelude;
 
 use std::collections::HashMap;
-pub use prelude::autobind;
+pub use c0i::value::autobind;
 
 use std::io::{stdin, stdout, Write};
 use std::process::exit;
@@ -57,7 +57,7 @@ use std::env;
 use libloading::{Library, Symbol};
 
 type NativeModuleLoadFn = fn(
-    &mut HashMap<Handle<sexpr_ir::gast::Symbol>, crate::value::Value>
+    &mut HashMap<Handle<crate::value::Symbol>, crate::value::Value>
 );
 
 fn main() {
