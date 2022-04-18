@@ -26,6 +26,7 @@ c0i = []
 c047 = ["pr47", "xjbutil", "build-time", "tokio", "serde", "serde_json"]
 
 [dependencies]
+libloading = "0.7"
 sexpr_ir = { git="https://github.com/imlyzh/sexpr_ir" }
 
 build-time = { optional = true, version = "0.1" }

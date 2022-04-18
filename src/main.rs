@@ -5,6 +5,7 @@ mod sexpr_to_ast;
 mod value;
 mod prelude;
 
+use std::collections::HashMap;
 pub use prelude::autobind;
 
 use std::io::{stdin, stdout, Write};
@@ -57,21 +58,40 @@ fn start_repl(env: &Handle<Scope>) -> ! {
 }
 
 use std::env;
+use libloading::{Library, Symbol};
+
+type NativeModuleLoadFn = fn(
+    &mut HashMap<Handle<sexpr_ir::gast::Symbol>, crate::value::Value>
+);
 
 fn main() {
-    let env = init();
     let mut args = env::args();
     args.next();
+    let args = args.collect::<Vec<_>>();
 
-    args.for_each(|i| {
-        if i.starts_with("--") {
+    let env = if args.iter().any(|x| x == "--no-builtins") {
+        Scope::new()
+    } else {
+        init()
+    };
+
+    for arg in args {
+        if arg.starts_with("--") {
             return;
         }
 
-        let r = load_file(&i, &env);
-        if let Err(e) = r {
-            println!("error: {:?}", e);
+        if arg.ends_with(".so") || arg.ends_with(".dll") {
+            unsafe {
+                let lib = Library::new(arg).unwrap();
+                let sym: Symbol<NativeModuleLoadFn> = lib.get(b"load_module").unwrap();
+                (sym)(&mut env.this_level.0.write().unwrap());
+            }
+        } else {
+            let r = load_file(&arg, &env);
+            if let Err(e) = r {
+                println!("error loading file {}: {:?}", arg, e);
+            }
         }
-    });
+    }
     start_repl(&env);
 }
