@@ -9,36 +9,32 @@ edition = "2018"
 [[bin]]
 name = "c0i"
 path = "src/main.rs"
+required-features = ["c0i"]
 
 [[bin]]
 name = "c047"
 path = "src/eval47/main.rs"
-
-[lib]
-name = "c0ilib"
-path = "src/lib.rs"
+required-features = ["c047"]
 
 [[example]]
 name = "free_variables"
 path = "examples/free_variables.rs"
 
+[features]
+default = ["c0i"]
+c0i = []
+c047 = ["pr47", "xjbutil", "build-time", "tokio", "serde", "serde_json"]
+
 [dependencies]
-build-time = "0.1.1"
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
-tokio = { version = "1", features = ["fs"] }
 sexpr_ir = { git="https://github.com/imlyzh/sexpr_ir" }
-xjbutil = { version="0.7.0", default-features=false, features=[
-    "slice-arena",
-    "either",
-    "makro",
-    "korobka",
-    "value",
-    "value-serde",
-    "rand"
-] }
+
+build-time = { optional = true, version = "0.1" }
+serde = { optional = true, version = "1", features = ["derive"] }
+serde_json = { optional = true, version = "1" }
+tokio = { optional = true, version = "1", features = ["fs"] }
 
     [dependencies.pr47]
+    optional=true
     git="https://github.com/Pr47/Pr47"
     rev="cda4df5cb090e3e9a562524ed7c76e0dc76972d8"
     default-features=false
@@ -49,4 +45,18 @@ xjbutil = { version="0.7.0", default-features=false, features=[
         "async",
         "async-tokio",
         "std47"
+    ]
+
+    [dependencies.xjbutil]
+    optional=true
+    version="0.7.0"
+    default-features=false
+    features=[
+        "slice-arena",
+        "either",
+        "makro",
+        "korobka",
+        "value",
+        "value-serde",
+        "rand"
     ]
