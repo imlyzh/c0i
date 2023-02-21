@@ -16,4 +16,4 @@ pub type VM = AL31F<Alloc>;
 pub type CompiledFunction = CF;
 pub type CompiledProgram = CP<Alloc>;
 pub type FFIFunction = &'static dyn Function<Combustor<Alloc>>;
-pub type FFIAsyncFunction = &'static dyn AsyncFunction<Alloc, VM, AsyncCombustor<Alloc>>;
+pub type FFIAsyncFunction = &'static dyn AsyncFunction<VM, AsyncCombustor<Alloc>>;

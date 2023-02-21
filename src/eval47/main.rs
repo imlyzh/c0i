@@ -3,9 +3,9 @@ use std::env;
 use std::sync::Arc;
 
 use build_time::build_time_utc;
-use pr47::data::exception::Exception;
 use pr47::std47::futures::SLEEP_MS_BIND;
 use pr47::vm::al31f::alloc::default_alloc::DefaultAlloc;
+use pr47::vm::al31f::exception::Exception;
 use pr47::vm::al31f::executor::{create_vm_main_thread, vm_thread_run_function, VMThread};
 use sexpr_ir::syntax::sexpr::parse;
 use xjbutil::std_ext::ResultExt;
@@ -17,9 +17,7 @@ use c0i::eval47::builtins::{
     INT_TO_STRING_BIND,
     PARSE_INT_BIND,
     RAND_BIND,
-    READ_LINE_BIND,
-    SPLIT_BIND,
-    TO_CHAR_ARRAY_BIND
+    READ_LINE_BIND
 };
 use c0i::eval47::commons::CompiledProgram;
 use c0i::eval47::compile::CompileContext;
@@ -103,8 +101,6 @@ fn main() {
     context.register_ffi("string->int", &PARSE_INT_BIND);
     context.register_ffi("int->string", &INT_TO_STRING_BIND);
     context.register_ffi("rand", &RAND_BIND);
-    context.register_ffi("string->chars", &TO_CHAR_ARRAY_BIND);
-    context.register_ffi("split", &SPLIT_BIND);
     context.register_async_ffi("sleep", SLEEP_MS_BIND);
     let mut analyse_result = context.min_scope_analyse(&top_levels);
 
