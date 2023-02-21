@@ -4,11 +4,13 @@ use std::mem::transmute;
 use pr47::builtins::closure::Closure;
 use pr47::builtins::object::Object;
 use pr47::builtins::vec::VMGenericVec;
+use pr47::data::exception::ExceptionInner;
 use pr47::data::generic::GenericTypeVT;
 use pr47::data::tyck::TyckInfoPool;
 use pr47::data::Value;
 use pr47::data::value_typed::{VALUE_TYPE_TAG_MASK, ValueTypeTag};
 use pr47::ffi::{DataOption, FFIException, Signature};
+use pr47::ffi::async_fn::{AsyncFunctionBase, AsyncReturnType, AsyncVMContext, LockedCtx, Promise};
 use pr47::ffi::sync_fn::{FunctionBase, value_into_ref_noalias, VMContext};
 use xjbutil::boxed_slice;
 use xjbutil::rand::random;
@@ -259,4 +261,39 @@ impl FunctionBase for RandBind {
     }
 
     implement_blanket_call_unchecked!{}
+}
+
+pub struct YieldBind;
+pub const YIELD_BIND: YieldBind = YieldBind;
+
+impl AsyncFunctionBase for YieldBind {
+    fn signature(tyck_info_pool: &mut TyckInfoPool) -> Signature {
+        Signature {
+            func_type: tyck_info_pool.create_function_type(&[], &[], &[]),
+            param_options: boxed_slice![],
+            ret_option: boxed_slice![]
+        }
+    }
+
+    unsafe fn call_rtlc<LC: LockedCtx, ACTX: AsyncVMContext<Locked=LC>>(
+        _context: &ACTX,
+        _args: &[Value]
+    ) -> Result<Promise<LC>, FFIException> {
+        struct YieldRetType;
+
+        impl<T: LockedCtx> AsyncReturnType<T> for YieldRetType {
+            fn is_err(&self) -> bool {
+                false
+            }
+
+            fn resolve(self: Box<Self>, _locked_ctx: &mut T, _dests: &[*mut Value]) -> Result<usize, ExceptionInner> {
+                Ok(0)
+            }
+        }
+
+        Ok(Promise(Box::pin(async {
+            tokio::task::yield_now().await;
+            Box::new(YieldRetType) as Box<dyn AsyncReturnType<LC>>
+        })))
+    }
 }

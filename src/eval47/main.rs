@@ -17,7 +17,8 @@ use c0i::eval47::builtins::{
     INT_TO_STRING_BIND,
     PARSE_INT_BIND,
     RAND_BIND,
-    READ_LINE_BIND
+    READ_LINE_BIND,
+    YIELD_BIND
 };
 use c0i::eval47::commons::CompiledProgram;
 use c0i::eval47::compile::CompileContext;
@@ -42,6 +43,8 @@ async fn run_program(
             UncheckedSendSync::new((&mut vm_thread, func_id, &args))
         ).unwrap_no_debug().await.into_inner()
     };
+    vm_thread.vm.finish().await;
+
     let end_time = std::time::Instant::now();
     eprintln!("\nProgram terminated, elapsed time = {}",
               (end_time - start_time).as_millis());
@@ -102,6 +105,7 @@ fn main() {
     context.register_ffi("int->string", &INT_TO_STRING_BIND);
     context.register_ffi("rand", &RAND_BIND);
     context.register_async_ffi("sleep", SLEEP_MS_BIND);
+    context.register_async_ffi("yield", &YIELD_BIND);
     let mut analyse_result = context.min_scope_analyse(&top_levels);
 
     if args.contains(&"--only-analyse".to_string()) {
