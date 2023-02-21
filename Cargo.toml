@@ -49,7 +49,7 @@ tokio = { optional = true, version = "1", features = ["fs"] }
 
     [dependencies.xjbutil]
     optional=true
-    version="0.9.0-BRAVO"
+    version="0.9.0-CHARLIE"
     default-features=false
     features=[
         "slice-arena",
