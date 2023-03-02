@@ -36,8 +36,7 @@ tokio = { optional = true, version = "1", features = ["fs"] }
 
     [dependencies.pr47]
     optional=true
-    # version = "0.1.4-CHARLIE"
-    path = "../../pr47/pr47-core"
+    version = "0.1.4-CHARLIE"
     default-features=false
     features=[
         "al31f",
