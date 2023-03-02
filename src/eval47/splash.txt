@@ -12,9 +12,9 @@ C047 - The Cement Bootstrap Compiler c0i with Pr47 backend
             Chuigda  github.com/chuigda
             CousinZe github.com/CousinZe
   Version : Core   0.1.2
-            C047   ALFA2
+            C047   CHARLIE
             StdLib 0.0.1
-  Deps    : Pr47    0.1.4-ALFA (Git #cda4df5)
+  Deps    : Pr47    0.1.4-CHARLIE
             xjbutil 0.7.0
   Build   : {} ({} build)
 

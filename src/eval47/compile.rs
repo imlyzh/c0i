@@ -356,7 +356,7 @@ impl CompileContext {
         match value {
             Value::Nil => self.code.push(Insc::MakeBoolConst(false, tgt)),
             Value::Bool(value) => self.code.push(Insc::MakeBoolConst(*value, tgt)),
-            Value::Char(value) => self.code.push(Insc::MakeCharConst(*value, tgt)),
+            Value::Char(value) => self.code.push(Insc::MakeIntConst(*value as i64, tgt)),
             Value::Uint(_) => unreachable!(),
             Value::Int(value) => self.code.push(Insc::MakeIntConst(*value, tgt)),
             Value::Float(value) => self.code.push(Insc::MakeFloatConst(*value, tgt)),
@@ -918,7 +918,7 @@ impl CompileContext {
             },
             ">" => {
                 assert_eq!(args.len(), 2, "`>` expects 2 arguments");
-                self.code.push(Insc::GtAny(args[0], args[1], tgt));
+                self.code.push(Insc::LtAny(args[1], args[0], tgt));
                 tgt
             },
             "<" => {
@@ -928,7 +928,7 @@ impl CompileContext {
             },
             ">=" => {
                 assert_eq!(args.len(), 2, "`>=` expects 2 arguments");
-                self.code.push(Insc::GeAny(args[0], args[1], tgt));
+                self.code.push(Insc::LeAny(args[1], args[0], tgt));
                 tgt
             },
             "<=" => {

@@ -3,9 +3,9 @@ use std::env;
 use std::sync::Arc;
 
 use build_time::build_time_utc;
-use pr47::data::exception::Exception;
 use pr47::std47::futures::SLEEP_MS_BIND;
 use pr47::vm::al31f::alloc::default_alloc::DefaultAlloc;
+use pr47::vm::al31f::exception::Exception;
 use pr47::vm::al31f::executor::{create_vm_main_thread, vm_thread_run_function, VMThread};
 use sexpr_ir::syntax::sexpr::parse;
 use xjbutil::std_ext::ResultExt;
@@ -18,8 +18,7 @@ use c0i::eval47::builtins::{
     PARSE_INT_BIND,
     RAND_BIND,
     READ_LINE_BIND,
-    SPLIT_BIND,
-    TO_CHAR_ARRAY_BIND
+    YIELD_BIND
 };
 use c0i::eval47::commons::CompiledProgram;
 use c0i::eval47::compile::CompileContext;
@@ -44,6 +43,8 @@ async fn run_program(
             UncheckedSendSync::new((&mut vm_thread, func_id, &args))
         ).unwrap_no_debug().await.into_inner()
     };
+    vm_thread.vm.finish().await;
+
     let end_time = std::time::Instant::now();
     eprintln!("\nProgram terminated, elapsed time = {}",
               (end_time - start_time).as_millis());
@@ -103,9 +104,8 @@ fn main() {
     context.register_ffi("string->int", &PARSE_INT_BIND);
     context.register_ffi("int->string", &INT_TO_STRING_BIND);
     context.register_ffi("rand", &RAND_BIND);
-    context.register_ffi("string->chars", &TO_CHAR_ARRAY_BIND);
-    context.register_ffi("split", &SPLIT_BIND);
     context.register_async_ffi("sleep", SLEEP_MS_BIND);
+    context.register_async_ffi("yield", &YIELD_BIND);
     let mut analyse_result = context.min_scope_analyse(&top_levels);
 
     if args.contains(&"--only-analyse".to_string()) {
